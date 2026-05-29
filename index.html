@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>somda — Official Schedule</title>
+
+  <!-- =====================================================
+    📌 SEO / 공유 미리보기 설정
+    카카오톡, 인스타 등에서 링크 공유할 때 나오는 내용이에요.
+    content= 안의 내용을 원하는 대로 수정하세요.
+  ====================================================== -->
+  <meta name="description" content="솜다(somda) 공식 공연 스케쥴">
+  <meta property="og:title" content="somda — Official Schedule">
+  <meta property="og:description" content="솜다의 공연 일정을 확인하세요">
+  <meta property="og:type" content="website">
+
+  <!-- 구글 폰트 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- =====================================================
+    🔥 FIREBASE 설정 (1단계)
+    아래 3개의 script 태그는 Firebase를 불러오는 코드예요.
+    이미 들어 있으니 건드리지 않아도 돼요.
+  ====================================================== -->
+  <script type="module">
+    // Firebase SDK 불러오기
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+    // =====================================================
+    // 🔥 FIREBASE 설정 (2단계) ← 여기만 채우면 끝!
+    //
+    // Firebase 콘솔(console.firebase.google.com)에서
+    // 새 프로젝트 만들고 → 웹 앱 추가 → 아래 값들을 복붙하세요.
+    //
+    // 지금은 더미값이 들어 있어서 앱이 "오프라인 모드"로 작동해요.
+    // (일정이 브라우저에만 저장됨. 팬들한테는 안 보임)
+    // Firebase 연결하면 모든 팬이 실시간으로 볼 수 있어요!
+    // =====================================================
+    const firebaseConfig = {
+      apiKey:            "여기에-붙여넣기",          // apiKey
+      authDomain:        "여기에-붙여넣기",          // authDomain
+      projectId:         "여기에-붙여넣기",          // projectId
+      storageBucket:     "여기에-붙여넣기",          // storageBucket
+      messagingSenderId: "여기에-붙여넣기",          // messagingSenderId
+      appId:             "여기에-붙여넣기"           // appId
+    };
+
+    // Firebase 연결 시도
+    let db = null;
+    let storage = null;
+    let firebaseReady = false;
+
+    try {
+      if (firebaseConfig.apiKey !== "여기에-붙여넣기") {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        storage = getStorage(app);
+        firebaseReady = true;
+        console.log("✅ Firebase 연결 성공!");
+      } else {
+        console.log("⚠️ Firebase 미설정 — 로컬 모드로 실행됩니다.");
+      }
+    } catch(e) {
+      console.log("⚠️ Firebase 연결 실패 — 로컬 모드로 실행됩니다.", e);
+    }
+
+    // =====================================================
+    // Firebase 데이터 읽기/쓰기 함수들
+    // =====================================================
+    async function fbLoadEvents() {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, "somda", "events"));
+        return snap.exists() ? snap.data().list : null;
+      } catch(e) { return null; }
+    }
+
+    async function fbSaveEvents(events) {
+      if (!db) return;
+      try {
+        await setDoc(doc(db, "somda", "events"), { list: events });
+      } catch(e) { console.log("저장 실패:", e); }
+    }
+
+    async function fbLoadBanner() {
+      if (!db) return null;
+      try {
+        const snap = await getDoc(doc(db, "somda", "banner"));
+        return snap.exists() ? snap.data().url : null;
+      } catch(e) { return null; }
+    }
+
+    async function fbSaveBanner(dataUrl) {
+      if (!storage || !db) return;
+      try {
+        const storageRef = ref(storage, "somda/banner.jpg");
+        await uploadString(storageRef, dataUrl, "data_url");
+        const url = await getDownloadURL(storageRef);
+        await setDoc(doc(db, "somda", "banner"), { url });
+        return url;
+      } catch(e) { console.log("배너 저장 실패:", e); return null; }
+    }
+
+    // 앱이 로드된 후 Firebase 함수들을 전역으로 노출
+    window._fb = { fbLoadEvents, fbSaveEvents, fbLoadBanner, fbSaveBanner, firebaseReady };
+    window.dispatchEvent(new Event("firebase-ready"));
+  </script>
+
+  <style>
+    /* ====================================================
+       전체 디자인 스타일
+       색상 변경하려면 :root 안의 값을 바꾸세요
+    ==================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --warm: #B5704A;
+      --warm-light: #F0E6DC;
+      --warm-pale: #FAF5F0;
+      --warm-dark: #7A3F20;
+      --warm-mid: #D4956F;
+      --ink: #1A1410;
+      --ink2: #4A3728;
+      --ink3: #8A7060;
+      --line: rgba(181,112,74,0.18);
+      --line2: rgba(181,112,74,0.35);
+      --bg: #FFFCF9;
+    }
+    html, body { height: 100%; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+    .app { max-width: 480px; margin: 0 auto; background: var(--bg); min-height: 100vh; padding-bottom: 60px; }
+
+    /* 배너 */
+    .banner { position: relative; width: 100%; height: 240px; overflow: hidden; background: #2A1F18; }
+    .banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+    .banner-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.55) 100%); }
+    .banner-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 22px 20px; }
+    .banner-logo { height: 38px; width: auto; display: block; margin-bottom: 5px; filter: brightness(0) invert(1); opacity: 0.93; }
+    .banner-sub { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; text-transform: uppercase; }
+    .banner-lang { position: absolute; top: 13px; right: 14px; display: flex; gap: 5px; }
+    .lang-btn { padding: 4px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.7); cursor: pointer; transition: all 0.15s; }
+    .lang-btn.active { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.8); }
+    .lang-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+    .admin-btn { position: absolute; top: 13px; left: 14px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.8); font-size: 14px; transition: all 0.15s; }
+    .admin-btn:hover { background: rgba(0,0,0,0.5); }
+
+    /* 달력 */
+    .cal-section { padding: 22px 22px 0; }
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .cal-month-label { font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -0.3px; font-family: 'Noto Serif KR', serif; }
+    .nav-btn { width: 30px; height: 30px; border: 0.5px solid var(--line2); border-radius: 50%; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 13px; transition: all 0.15s; }
+    .nav-btn:hover { background: var(--warm-light); color: var(--warm); }
+    .cal-days-header { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+    .cal-dlabel { text-align: center; font-size: 10px; font-weight: 500; color: var(--ink3); letter-spacing: 0.5px; padding: 4px 0; }
+    .cal-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+    .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; position: relative; transition: all 0.12s; font-size: 13px; font-weight: 400; color: var(--ink); }
+    .cal-day:hover:not(.other-month) { background: var(--warm-light); }
+    .cal-day.other-month { color: var(--ink3); opacity: 0.3; cursor: default; }
+    .cal-day.today { background: var(--ink); color: #fff; font-weight: 600; }
+    .cal-day.today:hover { background: var(--ink); }
+    .cal-day.has-event .dot { position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--warm); }
+    .cal-day.today .dot { background: #fff; }
+    .cal-day.selected:not(.today) { border: 1.5px solid var(--warm); color: var(--warm-dark); font-weight: 600; }
+    .divider { height: 1px; background: var(--line); margin: 18px 0 0; }
+
+    /* 스케쥴 */
+    .sched-section { padding: 18px 22px; }
+    .section-label { font-size: 10px; font-weight: 600; color: var(--ink3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
+    .sched-date-head { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 14px; font-family: 'Noto Serif KR', serif; }
+    .no-event { font-size: 13px; color: var(--ink3); padding: 8px 0 4px; }
+    .event-card { border: 0.5px solid var(--line2); border-left: 3px solid var(--warm); border-radius: 0 10px 10px 0; padding: 14px 16px; margin-bottom: 10px; background: var(--bg); }
+    .event-type { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: var(--warm); text-transform: uppercase; margin-bottom: 5px; }
+    .event-title { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; margin-bottom: 10px; letter-spacing: -0.2px; }
+    .event-meta { display: flex; flex-direction: column; gap: 4px; }
+    .event-meta-row { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--ink2); }
+    .meta-icon { font-size: 13px; margin-top: 1px; color: var(--warm-mid); flex-shrink: 0; }
+
+    /* 다가오는 공연 */
+    .upcoming-section { padding: 0 22px 20px; }
+    .upcoming-item { display: flex; align-items: center; gap: 14px; padding: 11px 0; border-bottom: 0.5px solid var(--line); cursor: pointer; transition: opacity 0.12s; }
+    .upcoming-item:hover { opacity: 0.7; }
+    .upcoming-date-badge { width: 38px; text-align: center; flex-shrink: 0; }
+    .badge-day { font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1; font-family: 'Noto Serif KR', serif; }
+    .badge-mon { font-size: 9px; color: var(--warm); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+    .upcoming-info { flex: 1; }
+    .upcoming-title { font-size: 13px; font-weight: 500; color: var(--ink); line-height: 1.4; }
+    .upcoming-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+
+    /* 로딩 상태 표시 */
+    .loading-badge { font-size: 11px; color: var(--warm); background: var(--warm-light); padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px; }
+
+    /* 모달 (관리자 창, 비번 창 등) */
+    .modal-wrap { display: none; position: fixed; inset: 0; background: rgba(26,20,16,0.6); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    .modal-wrap.open { display: flex; }
+    .modal-box { background: var(--bg); border-radius: 14px; padding: 26px 22px; width: 100%; max-width: 360px; max-height: 88vh; overflow-y: auto; }
+    .modal-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 14px; font-family: 'Noto Serif KR', serif; }
+    .modal-label { font-size: 10px; color: var(--ink3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; margin-top: 11px; }
+    .modal-input { width: 100%; padding: 9px 12px; border: 0.5px solid var(--line2); border-radius: 8px; background: var(--warm-pale); font-size: 13px; color: var(--ink); outline: none; font-family: 'Noto Sans KR', sans-serif; }
+    .modal-input:focus { border-color: var(--warm); }
+    .modal-row { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-cancel { flex: 1; padding: 10px; border: 0.5px solid var(--line2); border-radius: 8px; background: transparent; font-size: 13px; color: var(--ink3); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+    .btn-confirm { flex: 1; padding: 10px; border: none; border-radius: 8px; background: var(--ink); font-size: 13px; color: #fff; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; }
+    .btn-warm { width: 100%; margin-top: 8px; padding: 10px; border: none; border-radius: 8px; background: var(--warm); font-size: 13px; color: #fff; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; }
+    .err-msg { font-size: 12px; color: #c44; margin-top: 6px; min-height: 16px; }
+    select.modal-input { appearance: none; -webkit-appearance: none; }
+
+    /* 관리자 패널 */
+    .admin-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .admin-title { font-size: 15px; font-weight: 700; color: var(--ink); font-family: 'Noto Serif KR', serif; }
+    .admin-close-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--ink3); }
+    .admin-badge { display: inline-block; font-size: 10px; padding: 2px 8px; background: var(--warm-light); color: var(--warm-dark); border-radius: 20px; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; }
+    .admin-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .admin-tab { flex: 1; padding: 8px 6px; border: 0.5px solid var(--line2); border-radius: 8px; background: transparent; font-size: 12px; color: var(--ink3); cursor: pointer; text-align: center; transition: all 0.12s; font-family: 'Noto Sans KR', sans-serif; }
+    .admin-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .event-admin-item { border: 0.5px solid var(--line); border-radius: 10px; padding: 11px 13px; margin-bottom: 7px; background: var(--warm-pale); display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .ev-d { font-size: 11px; color: var(--warm); font-weight: 600; margin-bottom: 2px; }
+    .ev-t { font-size: 12px; color: var(--ink); font-weight: 500; line-height: 1.3; }
+    .event-admin-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .btn-edit-sm, .btn-del-sm { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; border: 0.5px solid var(--line); }
+    .btn-edit-sm { background: var(--warm-light); color: var(--warm-dark); }
+    .btn-del-sm { background: #fff5f5; color: #c44; border-color: rgba(200,68,68,0.2); }
+
+    /* 배너 사진 업로드 */
+    .photo-upload-area { border: 1.5px dashed var(--line2); border-radius: 12px; padding: 22px 16px; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 10px; background: var(--warm-pale); }
+    .photo-upload-area:hover { border-color: var(--warm); background: var(--warm-light); }
+    .photo-upload-area i { font-size: 28px; color: var(--warm-mid); display: block; margin-bottom: 8px; }
+    .photo-upload-area p { font-size: 12px; color: var(--ink3); line-height: 1.6; }
+    .photo-preview-img { width: 100%; height: 140px; object-fit: cover; object-position: center top; border-radius: 10px; display: block; margin-bottom: 10px; }
+    .btn-remove { width: 100%; margin-bottom: 6px; padding: 8px; border: 0.5px solid rgba(200,68,68,0.3); border-radius: 8px; background: transparent; font-size: 12px; color: #c44; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+
+    /* Tabler 아이콘 */
+    @import url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css");
+  </style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ===== 상단 배너 ===== -->
+  <div class="banner" id="banner">
+    <img class="banner-img" id="bannerImg" src="" alt="somda banner" style="opacity:0;transition:opacity 0.4s">
+    <div class="banner-overlay"></div>
+    <div class="banner-content">
+      <!-- 로고 — 아래 src 안의 base64 데이터가 로고 이미지예요 -->
+      <img class="banner-logo" id="bannerLogo" src="data:image/png;base64,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" alt="somda logo">
+      <div class="banner-sub" id="bannerSub">Official Schedule</div>
+    </div>
+    <!-- 언어 선택 버튼 -->
+    <div class="banner-lang">
+      <button class="lang-btn" onclick="setLang('ko')">KOR</button>
+      <button class="lang-btn" onclick="setLang('en')">ENG</button>
+      <button class="lang-btn" onclick="setLang('pt')">PT</button>
+    </div>
+    <!-- 관리자 버튼 (자물쇠) -->
+    <button class="admin-btn" id="adminBtn" onclick="handleAdminClick()" aria-label="관리자">
+      <i class="ti ti-lock"></i>
+    </button>
+  </div>
+
+  <!-- ===== 달력 ===== -->
+  <div class="cal-section">
+    <div class="cal-nav">
+      <button class="nav-btn" onclick="prevMonth()"><i class="ti ti-chevron-left"></i></button>
+      <span class="cal-month-label" id="calMonthLabel"></span>
+      <button class="nav-btn" onclick="nextMonth()"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div class="cal-days-header" id="daysHeader"></div>
+    <div class="cal-days-grid" id="calGrid"></div>
+    <div class="divider"></div>
+  </div>
+
+  <!-- ===== 선택한 날 스케쥴 ===== -->
+  <div class="sched-section" id="schedSection"></div>
+
+  <!-- ===== 다가오는 공연 목록 ===== -->
+  <div class="upcoming-section">
+    <div class="section-label" id="upcomingLabel"></div>
+    <div id="upcomingList"></div>
+  </div>
+
+</div>
+
+<!-- ===== 모달들 (화면 위에 뜨는 창들) ===== -->
+
+<!-- 비밀번호 입력 모달 -->
+<div class="modal-wrap" id="pwModal">
+  <div class="modal-box" id="pwBox"></div>
+</div>
+
+<!-- 관리자 패널 모달 -->
+<div class="modal-wrap" id="adminModal">
+  <div class="modal-box" id="adminBox" style="max-width:380px;"></div>
+</div>
+
+<!-- 공연 추가/수정 모달 -->
+<div class="modal-wrap" id="eventModal">
+  <div class="modal-box" id="eventBox"></div>
+</div>
+
+<!-- 숨겨진 파일 업로드 인풋 -->
+<input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+
+<!-- =====================================================
+  Tabler 아이콘 폰트 (버튼 아이콘들)
+====================================================== -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+
+<script>
+// =====================================================
+// 🌍 다국어 텍스트 (한국어 / 영어 / 포르투갈어)
+// =====================================================
+const I18N = {
+  ko: {
+    sub: "Official Schedule",
+    days: ["월","화","수","목","금","토","일"],
+    noEvent: "등록된 스케쥴이 없어요",
+    upcoming: "다가오는 공연",
+    todaySched: "이날의 스케쥴",
+    mons: ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],
+    adminTitle: "스케쥴 관리", tabSched: "공연 일정", tabPhoto: "배너 사진",
+    addBtn: "새 공연 추가", logout: "로그아웃",
+    fieldDate: "날짜", fieldType: "공연 유형", fieldTitle: "공연명",
+    fieldTime: "시간", fieldVenue: "장소", fieldWith: "함께 연주하는 뮤지션",
+    save: "저장", cancel: "취소",
+    photoDesc: "탭해서 배너 사진 업로드\n(JPG, PNG 권장)",
+    photoRemove: "사진 제거",
+    loginTitle: "관리자 로그인", pwLabel: "비밀번호", pwPlaceholder: "비밀번호를 입력하세요",
+    loginBtn: "로그인", pwErr: "비밀번호가 올바르지 않아요",
+    required: "날짜, 공연명, 시간, 장소는 필수예요",
+    typeOptions: ["공연","방송","행사","기타"],
+    saving: "저장 중...", saved: "저장됐어요!",
+    monthNames: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+  },
+  en: {
+    sub: "Official Schedule",
+    days: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    noEvent: "No events scheduled",
+    upcoming: "Upcoming Shows",
+    todaySched: "Schedule",
+    mons: ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],
+    adminTitle: "Manage Schedule", tabSched: "Events", tabPhoto: "Banner Photo",
+    addBtn: "Add New Event", logout: "Log Out",
+    fieldDate: "Date", fieldType: "Type", fieldTitle: "Event Name",
+    fieldTime: "Time", fieldVenue: "Venue", fieldWith: "Performing With",
+    save: "Save", cancel: "Cancel",
+    photoDesc: "Tap to upload a banner photo\n(JPG or PNG recommended)",
+    photoRemove: "Remove Photo",
+    loginTitle: "Admin Login", pwLabel: "Password", pwPlaceholder: "Enter password",
+    loginBtn: "Login", pwErr: "Incorrect password",
+    required: "Date, title, time and venue are required",
+    typeOptions: ["Concert","Broadcast","Event","Other"],
+    saving: "Saving...", saved: "Saved!",
+    monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+  },
+  pt: {
+    sub: "Agenda Oficial",
+    days: ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"],
+    noEvent: "Nenhum evento agendado",
+    upcoming: "Próximas Apresentações",
+    todaySched: "Agenda do Dia",
+    mons: ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"],
+    adminTitle: "Gerenciar Agenda", tabSched: "Eventos", tabPhoto: "Foto do Banner",
+    addBtn: "Adicionar Evento", logout: "Sair",
+    fieldDate: "Data", fieldType: "Tipo", fieldTitle: "Nome do Evento",
+    fieldTime: "Hora", fieldVenue: "Local", fieldWith: "Tocando Com",
+    save: "Salvar", cancel: "Cancelar",
+    photoDesc: "Toque para enviar foto do banner\n(JPG ou PNG recomendado)",
+    photoRemove: "Remover Foto",
+    loginTitle: "Login Admin", pwLabel: "Senha", pwPlaceholder: "Digite a senha",
+    loginBtn: "Entrar", pwErr: "Senha incorreta",
+    required: "Data, título, hora e local são obrigatórios",
+    typeOptions: ["Show","Transmissão","Evento","Outro"],
+    saving: "Salvando...", saved: "Salvo!",
+    monthNames: ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"],
+  }
+};
+
+// =====================================================
+// 🔑 관리자 비밀번호
+// 아래 문자열을 원하는 비밀번호로 바꾸세요!
+// =====================================================
+const ADMIN_PW = "somda2026";
+
+// =====================================================
+// 앱 상태 변수들
+// =====================================================
+const EVENTS_KEY  = "somda_events_v3";
+const BANNER_KEY  = "somda_banner_v2";
+const LANG_KEY    = "somda_lang_v1";
+
+const DEFAULT_EVENTS = {
+  "2026-05-31": [{ type:"공연", title:"청춘마이크 수도강원권 태백 황지연못 피아노무대", time:"15:00", venue:"강원 태백 황지연못 피아노무대", with:"솔로" }],
+  "2026-06-07": [{ type:"공연", title:"서울재즈페스티벌 스테이지 B", time:"16:00", venue:"서울 올림픽공원 잔디마당", with:"이지훈 (드럼), 오하윤 (베이스)" }],
+  "2026-06-14": [{ type:"공연", title:"감성 인디 클럽나이트", time:"21:00", venue:"서울 홍대 클럽 FF", with:"솔로" }],
+};
+
+let EVENTS       = loadLocal(EVENTS_KEY, JSON.stringify(DEFAULT_EVENTS));
+let lang         = loadLocalStr(LANG_KEY, "ko");
+let isAdmin      = false;
+let adminTab     = "sched";
+let curYear      = new Date().getFullYear();
+let curMonth     = new Date().getMonth() + 1;
+let selectedDate = null;
+
+const today    = new Date();
+const todayKey = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+// =====================================================
+// 로컬 스토리지 유틸
+// =====================================================
+function loadLocal(key, fallback) {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : JSON.parse(fallback); }
+  catch(e) { return JSON.parse(fallback); }
+}
+function loadLocalStr(key, fallback) {
+  try { return localStorage.getItem(key) || fallback; } catch(e) { return fallback; }
+}
+function saveLocal(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+}
+function saveLocalStr(key, val) {
+  try { localStorage.setItem(key, val); } catch(e) {}
+}
+
+function pad(n) { return String(n).padStart(2, "0"); }
+function t() { return I18N[lang]; }
+function dk(y, m, d) { return `${y}-${pad(m)}-${pad(d)}`; }
+
+// =====================================================
+// Firebase와 동기화 (앱 시작 시 한 번)
+// =====================================================
+window.addEventListener("firebase-ready", async () => {
+  if (!window._fb || !window._fb.firebaseReady) return;
+  const { fbLoadEvents, fbLoadBanner } = window._fb;
+
+  // 서버에서 일정 불러오기
+  const serverEvents = await fbLoadEvents();
+  if (serverEvents) {
+    EVENTS = serverEvents;
+    saveLocal(EVENTS_KEY, EVENTS);
+    renderCal();
+    renderUpcoming();
+    if (selectedDate) renderSched(selectedDate);
+  }
+
+  // 서버에서 배너 URL 불러오기
+  const bannerUrl = await fbLoadBanner();
+  if (bannerUrl) {
+    const img = document.getElementById("bannerImg");
+    img.src = bannerUrl;
+    img.style.opacity = "1";
+  }
+});
+
+// =====================================================
+// 저장 함수 (로컬 + Firebase 동시)
+// =====================================================
+async function saveEvents(ev) {
+  saveLocal(EVENTS_KEY, ev);
+  if (window._fb && window._fb.firebaseReady) {
+    await window._fb.fbSaveEvents(ev);
+  }
+}
+
+async function saveBannerData(dataUrl) {
+  saveLocalStr(BANNER_KEY, dataUrl);
+  if (window._fb && window._fb.firebaseReady) {
+    const url = await window._fb.fbSaveBanner(dataUrl);
+    return url || dataUrl;
+  }
+  return dataUrl;
+}
+
+// =====================================================
+// 언어 변경
+// =====================================================
+function setLang(l) {
+  lang = l;
+  saveLocalStr(LANG_KEY, l);
+  document.querySelectorAll(".lang-btn").forEach((b, i) => {
+    b.classList.toggle("active", ["ko","en","pt"][i] === l);
+  });
+  document.getElementById("bannerSub").textContent = t().sub;
+  renderCal();
+  renderUpcoming();
+  if (selectedDate) renderSched(selectedDate);
+  else document.getElementById("schedSection").innerHTML = "";
+}
+
+// =====================================================
+// 달력 렌더링
+// =====================================================
+function renderCal() {
+  const T = t();
+  const mLabel = document.getElementById("calMonthLabel");
+  if (lang === "ko") mLabel.textContent = `${curYear}. ${pad(curMonth)}`;
+  else if (lang === "en") mLabel.textContent = `${T.monthNames[curMonth-1]} ${curYear}`;
+  else mLabel.textContent = `${T.monthNames[curMonth-1]} ${curYear}`;
+
+  // 요일 헤더
+  const dh = document.getElementById("daysHeader");
+  dh.innerHTML = T.days.map((d, i) =>
+    `<div class="cal-dlabel"${i>=5?' style="color:var(--warm-mid)"':''}>${d}</div>`
+  ).join("");
+
+  // 날짜 그리드
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML = "";
+  const firstDay = new Date(curYear, curMonth-1, 1).getDay();
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(curYear, curMonth, 0).getDate();
+  const prevMonthDays = new Date(curYear, curMonth-1, 0).getDate();
+
+  // 이전 달 날짜 (흐리게)
+  for (let i = 0; i < offset; i++) {
+    const d = document.createElement("div");
+    d.className = "cal-day other-month";
+    d.textContent = prevMonthDays - offset + 1 + i;
+    grid.appendChild(d);
+  }
+
+  // 이번 달 날짜
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dk(curYear, curMonth, d);
+    const div = document.createElement("div");
+    div.className = "cal-day";
+    div.textContent = d;
+    if (key === todayKey) div.classList.add("today");
+    if (key === selectedDate) div.classList.add("selected");
+    if (EVENTS[key] && EVENTS[key].length) {
+      div.classList.add("has-event");
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      div.appendChild(dot);
+    }
+    div.addEventListener("click", () => selectDate(key));
+    grid.appendChild(div);
+  }
+
+  // 다음 달 날짜 (흐리게)
+  const total = offset + daysInMonth;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= remaining; i++) {
+    const d = document.createElement("div");
+    d.className = "cal-day other-month";
+    d.textContent = i;
+    grid.appendChild(d);
+  }
+}
+
+function prevMonth() {
+  curMonth--;
+  if (curMonth < 1) { curMonth = 12; curYear--; }
+  selectedDate = null;
+  renderCal();
+  document.getElementById("schedSection").innerHTML = "";
+}
+function nextMonth() {
+  curMonth++;
+  if (curMonth > 12) { curMonth = 1; curYear++; }
+  selectedDate = null;
+  renderCal();
+  document.getElementById("schedSection").innerHTML = "";
+}
+
+// =====================================================
+// 날짜 선택 & 스케쥴 표시
+// =====================================================
+function selectDate(key) {
+  selectedDate = key;
+  renderCal();
+  renderSched(key);
+}
+
+function fmtDate(s) {
+  const [y, m, d] = s.split("-").map(Number);
+  const T = t();
+  const dt = new Date(y, m-1, d);
+  if (lang === "ko") {
+    const dw = ["일","월","화","수","목","금","토"][dt.getDay()];
+    return `${m}.${pad(d)} (${dw})`;
+  } else if (lang === "en") {
+    const dw = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
+    return `${T.mons[m-1]} ${d}, ${y} (${dw})`;
+  } else {
+    const dw = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][dt.getDay()];
+    return `${d}/${m}/${y} (${dw})`;
+  }
+}
+
+function renderSched(key) {
+  const T = t();
+  const sec = document.getElementById("schedSection");
+  const evs = EVENTS[key];
+  let h = `<div class="section-label">${T.todaySched}</div>
+            <div class="sched-date-head">${fmtDate(key)}</div>`;
+  if (!evs || !evs.length) {
+    h += `<div class="no-event">${T.noEvent}</div>`;
+  } else {
+    evs.forEach(ev => {
+      h += `<div class="event-card">
+        <div class="event-type">${ev.type}</div>
+        <div class="event-title">${ev.title}</div>
+        <div class="event-meta">
+          <div class="event-meta-row"><i class="ti ti-clock meta-icon"></i><span>${ev.time}</span></div>
+          <div class="event-meta-row"><i class="ti ti-map-pin meta-icon"></i><span>${ev.venue}</span></div>
+          <div class="event-meta-row"><i class="ti ti-users meta-icon"></i><span>${ev.with}</span></div>
+        </div>
+      </div>`;
+    });
+  }
+  sec.innerHTML = h;
+}
+
+// =====================================================
+// 다가오는 공연 목록
+// =====================================================
+function renderUpcoming() {
+  const T = t();
+  document.getElementById("upcomingLabel").textContent = T.upcoming;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const list = Object.entries(EVENTS)
+    .filter(([k]) => new Date(k) >= now)
+    .sort(([a],[b]) => new Date(a) - new Date(b))
+    .slice(0, 6);
+
+  const ul = document.getElementById("upcomingList");
+  if (!list.length) {
+    ul.innerHTML = `<div class="no-event">${T.noEvent}</div>`;
+    return;
+  }
+  ul.innerHTML = list.map(([k, evs]) => {
+    const [y, m, d] = k.split("-").map(Number);
+    const ev = evs[0];
+    return `<div class="upcoming-item" onclick="goToDate('${k}')">
+      <div class="upcoming-date-badge">
+        <div class="badge-day">${d}</div>
+        <div class="badge-mon">${T.mons[m-1]}</div>
+      </div>
+      <div class="upcoming-info">
+        <div class="upcoming-title">${ev.title}</div>
+        <div class="upcoming-sub">${ev.time} · ${ev.venue.split(" ").slice(0,3).join(" ")}</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:13px;color:var(--line2)"></i>
+    </div>`;
+  }).join("");
+}
+
+function goToDate(key) {
+  const [y, m] = key.split("-").map(Number);
+  curYear = y; curMonth = m;
+  selectDate(key);
+  document.getElementById("app").scrollIntoView({ behavior: "smooth" });
+}
+
+// =====================================================
+// 배너 사진 초기화
+// =====================================================
+function initBanner() {
+  const saved = loadLocalStr(BANNER_KEY, "");
+  if (saved) {
+    const img = document.getElementById("bannerImg");
+    img.src = saved;
+    img.style.opacity = "1";
+  }
+}
+
+// =====================================================
+// 관리자 버튼 클릭
+// =====================================================
+function handleAdminClick() {
+  if (isAdmin) openAdminPanel();
+  else showPwModal();
+}
+
+// =====================================================
+// 비밀번호 모달
+// =====================================================
+function showPwModal() {
+  const T = t();
+  const modal = document.getElementById("pwModal");
+  document.getElementById("pwBox").innerHTML = `
+    <div class="modal-title">
+      <i class="ti ti-lock" style="margin-right:6px;color:var(--warm)"></i>${T.loginTitle}
+    </div>
+    <div class="modal-label">${T.pwLabel}</div>
+    <input class="modal-input" type="password" id="pwInput" placeholder="${T.pwPlaceholder}">
+    <div class="err-msg" id="pwErr"></div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeModal('pwModal')">${T.cancel}</button>
+      <button class="btn-confirm" onclick="checkPw()">${T.loginBtn}</button>
+    </div>`;
+  modal.classList.add("open");
+  setTimeout(() => {
+    const el = document.getElementById("pwInput");
+    if (el) {
+      el.focus();
+      el.addEventListener("keydown", e => { if (e.key === "Enter") checkPw(); });
+    }
+  }, 80);
+}
+
+function checkPw() {
+  const T = t();
+  const v = document.getElementById("pwInput").value;
+  if (v === ADMIN_PW) {
+    isAdmin = true;
+    closeModal("pwModal");
+    document.getElementById("adminBtn").innerHTML = `<i class="ti ti-settings"></i>`;
+    openAdminPanel();
+  } else {
+    document.getElementById("pwErr").textContent = T.pwErr;
+  }
+}
+
+// =====================================================
+// 관리자 패널
+// =====================================================
+function openAdminPanel() {
+  document.getElementById("adminModal").classList.add("open");
+  renderAdminPanel();
+}
+
+function renderAdminPanel() {
+  const T = t();
+  const sorted = Object.entries(EVENTS).sort(([a],[b]) => new Date(a) - new Date(b));
+  const savedBanner = loadLocalStr(BANNER_KEY, "");
+
+  const evHtml = sorted.map(([k, evs]) =>
+    evs.map((ev, i) => `
+      <div class="event-admin-item">
+        <div>
+          <div class="ev-d">${fmtDate(k)}</div>
+          <div class="ev-t">${ev.title}</div>
+        </div>
+        <div class="event-admin-actions">
+          <div class="btn-edit-sm" onclick="openEditEvent('${k}',${i})"><i class="ti ti-edit"></i></div>
+          <div class="btn-del-sm" onclick="deleteEvent('${k}',${i})"><i class="ti ti-trash"></i></div>
+        </div>
+      </div>`).join("")
+  ).join("") || `<div class="no-event">${T.noEvent}</div>`;
+
+  document.getElementById("adminBox").innerHTML = `
+    <div class="admin-head">
+      <div class="admin-title">${T.adminTitle}</div>
+      <button class="admin-close-btn" onclick="closeModal('adminModal')"><i class="ti ti-x"></i></button>
+    </div>
+    <span class="admin-badge">ADMIN MODE</span>
+    <div class="admin-tabs">
+      <button class="admin-tab${adminTab==="sched"?" active":""}" onclick="switchAdminTab('sched')">${T.tabSched}</button>
+      <button class="admin-tab${adminTab==="photo"?" active":""}" onclick="switchAdminTab('photo')">${T.tabPhoto}</button>
+    </div>
+
+    <!-- 공연 탭 -->
+    <div id="adminSchedTab" style="${adminTab==="sched"?"":"display:none"}">
+      <button class="btn-warm" onclick="openAddEvent()">
+        <i class="ti ti-plus" style="margin-right:4px"></i>${T.addBtn}
+      </button>
+      <div style="margin-top:12px">${evHtml}</div>
+    </div>
+
+    <!-- 배너 사진 탭 -->
+    <div id="adminPhotoTab" style="${adminTab==="photo"?"":"display:none"}">
+      ${savedBanner ? `<img class="photo-preview-img" id="photoPreviewImg" src="${savedBanner}" alt="">` : ""}
+      <div class="photo-upload-area" onclick="document.getElementById('photoFileInput').click()">
+        <i class="ti ti-photo"></i>
+        <p>${T.photoDesc}</p>
+      </div>
+      ${savedBanner ? `<button class="btn-remove" onclick="removeBanner()">${T.photoRemove}</button>` : ""}
+    </div>
+
+    <button class="btn-cancel" style="width:100%;margin-top:14px" onclick="doLogout()">${T.logout}</button>`;
+}
+
+function switchAdminTab(tab) {
+  adminTab = tab;
+  renderAdminPanel();
+}
+
+// =====================================================
+// 배너 사진 처리
+// =====================================================
+async function handlePhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const dataUrl = ev.target.result;
+    const finalUrl = await saveBannerData(dataUrl);
+    const img = document.getElementById("bannerImg");
+    img.src = finalUrl;
+    img.style.opacity = "1";
+    renderAdminPanel();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = "";
+}
+
+function removeBanner() {
+  saveLocalStr(BANNER_KEY, "");
+  const img = document.getElementById("bannerImg");
+  img.src = "";
+  img.style.opacity = "0";
+  renderAdminPanel();
+}
+
+// =====================================================
+// 공연 추가
+// =====================================================
+function openAddEvent() {
+  const T = t();
+  closeModal("adminModal");
+  document.getElementById("eventBox").innerHTML = `
+    <div class="modal-title">${T.addBtn}</div>
+    <div class="modal-label">${T.fieldDate}</div>
+    <input class="modal-input" type="date" id="ev-date">
+    <div class="modal-label">${T.fieldType}</div>
+    <select class="modal-input" id="ev-type">
+      ${T.typeOptions.map(o => `<option>${o}</option>`).join("")}
+    </select>
+    <div class="modal-label">${T.fieldTitle}</div>
+    <input class="modal-input" id="ev-title" placeholder="${T.fieldTitle}">
+    <div class="modal-label">${T.fieldTime}</div>
+    <input class="modal-input" id="ev-time" placeholder="19:00">
+    <div class="modal-label">${T.fieldVenue}</div>
+    <input class="modal-input" id="ev-venue" placeholder="${T.fieldVenue}">
+    <div class="modal-label">${T.fieldWith}</div>
+    <input class="modal-input" id="ev-with" placeholder="${T.fieldWith}">
+    <div class="err-msg" id="evErr"></div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeModal('eventModal');openAdminPanel()">${T.cancel}</button>
+      <button class="btn-confirm" id="evSaveBtn" onclick="saveNewEvent()">${T.save}</button>
+    </div>`;
+  document.getElementById("eventModal").classList.add("open");
+}
+
+async function saveNewEvent() {
+  const T = t();
+  const date  = document.getElementById("ev-date").value;
+  const title = document.getElementById("ev-title").value.trim();
+  const time  = document.getElementById("ev-time").value.trim();
+  const venue = document.getElementById("ev-venue").value.trim();
+  const with_ = document.getElementById("ev-with").value.trim();
+  const type  = document.getElementById("ev-type").value;
+  if (!date || !title || !time || !venue) {
+    document.getElementById("evErr").textContent = T.required; return;
+  }
+  const btn = document.getElementById("evSaveBtn");
+  btn.textContent = T.saving; btn.disabled = true;
+  if (!EVENTS[date]) EVENTS[date] = [];
+  EVENTS[date].push({ type, title, time, venue, with: with_ || "솔로" });
+  await saveEvents(EVENTS);
+  btn.textContent = T.saved;
+  setTimeout(() => {
+    closeModal("eventModal");
+    renderCal(); renderUpcoming();
+    if (selectedDate) renderSched(selectedDate);
+    adminTab = "sched";
+    openAdminPanel();
+  }, 600);
+}
+
+// =====================================================
+// 공연 수정
+// =====================================================
+function openEditEvent(date, idx) {
+  const T = t();
+  const ev = EVENTS[date][idx];
+  closeModal("adminModal");
+  document.getElementById("eventBox").innerHTML = `
+    <div class="modal-title">${T.fieldTitle}</div>
+    <div class="modal-label">${T.fieldDate}</div>
+    <input class="modal-input" type="date" id="ev-date" value="${date}">
+    <div class="modal-label">${T.fieldType}</div>
+    <select class="modal-input" id="ev-type">
+      ${T.typeOptions.map(o => `<option${ev.type===o?" selected":""}>${o}</option>`).join("")}
+    </select>
+    <div class="modal-label">${T.fieldTitle}</div>
+    <input class="modal-input" id="ev-title" value="${ev.title}">
+    <div class="modal-label">${T.fieldTime}</div>
+    <input class="modal-input" id="ev-time" value="${ev.time}">
+    <div class="modal-label">${T.fieldVenue}</div>
+    <input class="modal-input" id="ev-venue" value="${ev.venue}">
+    <div class="modal-label">${T.fieldWith}</div>
+    <input class="modal-input" id="ev-with" value="${ev.with}">
+    <div class="err-msg" id="evErr"></div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeModal('eventModal');openAdminPanel()">${T.cancel}</button>
+      <button class="btn-confirm" id="evSaveBtn" onclick="saveEditEvent('${date}',${idx})">${T.save}</button>
+    </div>`;
+  document.getElementById("eventModal").classList.add("open");
+}
+
+async function saveEditEvent(oldDate, idx) {
+  const T = t();
+  const date  = document.getElementById("ev-date").value;
+  const title = document.getElementById("ev-title").value.trim();
+  const time  = document.getElementById("ev-time").value.trim();
+  const venue = document.getElementById("ev-venue").value.trim();
+  const with_ = document.getElementById("ev-with").value.trim();
+  const type  = document.getElementById("ev-type").value;
+  if (!date || !title || !time || !venue) {
+    document.getElementById("evErr").textContent = T.required; return;
+  }
+  const btn = document.getElementById("evSaveBtn");
+  btn.textContent = T.saving; btn.disabled = true;
+  EVENTS[oldDate].splice(idx, 1);
+  if (!EVENTS[oldDate].length) delete EVENTS[oldDate];
+  if (!EVENTS[date]) EVENTS[date] = [];
+  EVENTS[date].push({ type, title, time, venue, with: with_ || "솔로" });
+  await saveEvents(EVENTS);
+  btn.textContent = T.saved;
+  setTimeout(() => {
+    closeModal("eventModal");
+    renderCal(); renderUpcoming();
+    if (selectedDate) renderSched(selectedDate);
+    adminTab = "sched";
+    openAdminPanel();
+  }, 600);
+}
+
+// =====================================================
+// 공연 삭제
+// =====================================================
+async function deleteEvent(date, idx) {
+  EVENTS[date].splice(idx, 1);
+  if (!EVENTS[date].length) delete EVENTS[date];
+  await saveEvents(EVENTS);
+  renderCal(); renderUpcoming();
+  if (selectedDate) renderSched(selectedDate);
+  renderAdminPanel();
+}
+
+// =====================================================
+// 로그아웃
+// =====================================================
+function doLogout() {
+  isAdmin = false;
+  closeModal("adminModal");
+  document.getElementById("adminBtn").innerHTML = `<i class="ti ti-lock"></i>`;
+}
+
+// =====================================================
+// 모달 닫기
+// =====================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+// 모달 배경 클릭하면 닫기
+document.querySelectorAll(".modal-wrap").forEach(w => {
+  w.addEventListener("click", e => {
+    if (e.target === w) w.classList.remove("open");
+  });
+});
+
+// =====================================================
+// 앱 시작!
+// =====================================================
+initBanner();
+setLang(lang);
+document.querySelectorAll(".lang-btn").forEach((b, i) => {
+  b.classList.toggle("active", ["ko","en","pt"][i] === lang);
+});
+
+</script>
+</body>
+</html>
