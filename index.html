@@ -239,7 +239,7 @@
 
   <!-- ===== 상단 배너 ===== -->
   <div class="banner" id="banner">
-    <img class="banner-img" id="bannerImg" src="" alt="somda banner" style="opacity:0;transition:opacity 0.4s">
+    <img class="banner-img" id="bannerImg" src="" alt="somda banner" style="opacity:0;transition:opacity 0.4s;display:none">
     <div class="banner-overlay"></div>
     <div class="banner-content">
       <!-- 로고 — 아래 src 안의 base64 데이터가 로고 이미지예요 -->
@@ -449,7 +449,7 @@ window.addEventListener("firebase-ready", async () => {
   if (bannerUrl) {
     const img = document.getElementById("bannerImg");
     img.src = bannerUrl;
-    img.style.opacity = "1";
+    img.style.opacity = "1";img.style.display = "block";
   }
 });
 
@@ -662,7 +662,7 @@ function initBanner() {
   if (saved) {
     const img = document.getElementById("bannerImg");
     img.src = saved;
-    img.style.opacity = "1";
+    img.style.opacity = "1";img.style.display = "block";
   }
 }
 
