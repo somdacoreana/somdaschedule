@@ -4,140 +4,81 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>somda — Official Schedule</title>
-
-  <!-- =====================================================
-    📌 SEO / 공유 미리보기 설정
-    카카오톡, 인스타 등에서 링크 공유할 때 나오는 내용이에요.
-    content= 안의 내용을 원하는 대로 수정하세요.
-  ====================================================== -->
   <meta name="description" content="솜다(somda) 공식 공연 스케쥴">
   <meta property="og:title" content="somda — Official Schedule">
   <meta property="og:description" content="솜다의 공연 일정을 확인하세요">
   <meta property="og:type" content="website">
-
-  <!-- 구글 폰트 -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 
-  <!-- =====================================================
-    🔥 FIREBASE 설정 (1단계)
-    아래 3개의 script 태그는 Firebase를 불러오는 코드예요.
-    이미 들어 있으니 건드리지 않아도 돼요.
-  ====================================================== -->
   <script type="module">
-    // Firebase SDK 불러오기
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
     // =====================================================
-    // 🔥 FIREBASE 설정 (2단계) ← 여기만 채우면 끝!
-    //
-    // Firebase 콘솔(console.firebase.google.com)에서
-    // 새 프로젝트 만들고 → 웹 앱 추가 → 아래 값들을 복붙하세요.
-    //
-    // 지금은 더미값이 들어 있어서 앱이 "오프라인 모드"로 작동해요.
-    // (일정이 브라우저에만 저장됨. 팬들한테는 안 보임)
-    // Firebase 연결하면 모든 팬이 실시간으로 볼 수 있어요!
+    // 🔥 여기에 Firebase 설정값 붙여넣기
     // =====================================================
     const firebaseConfig = {
-      apiKey:            "AIzaSyCQI626V_wzE1uWQHyy8j44cHgsHptect4",          // apiKey
-      authDomain:        "somdacoreana.firebaseapp.com",          // authDomain
-      projectId:         "somdacoreana",          // projectId
-      storageBucket:     "somdacoreana.firebasestorage.app",          // storageBucket
-      messagingSenderId: "799152444366",          // messagingSenderId
-      appId:             "1:799152444366:web:c3f9dc0572dc5ee96c519f"           // appId
+      apiKey:            "여기에-붙여넣기",
+      authDomain:        "여기에-붙여넣기",
+      projectId:         "여기에-붙여넣기",
+      storageBucket:     "여기에-붙여넣기",
+      messagingSenderId: "여기에-붙여넣기",
+      appId:             "여기에-붙여넣기"
     };
 
-    // Firebase 연결 시도
     let db = null;
-    let storage = null;
     let firebaseReady = false;
 
     try {
       if (firebaseConfig.apiKey !== "여기에-붙여넣기") {
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
-        storage = getStorage(app);
         firebaseReady = true;
         console.log("✅ Firebase 연결 성공!");
       } else {
-        console.log("⚠️ Firebase 미설정 — 로컬 모드로 실행됩니다.");
+        console.log("⚠️ Firebase 미설정 — 로컬 모드");
       }
     } catch(e) {
-      console.log("⚠️ Firebase 연결 실패 — 로컬 모드로 실행됩니다.", e);
+      console.log("⚠️ Firebase 연결 실패", e);
     }
 
-    // =====================================================
-    // Firebase 데이터 읽기/쓰기 함수들
-    // =====================================================
-    async function fbLoadEvents() {
+    async function fbLoad(docName) {
       if (!db) return null;
       try {
-        const snap = await getDoc(doc(db, "somda", "events"));
-        return snap.exists() ? snap.data().list : null;
+        const snap = await getDoc(doc(db, "somda", docName));
+        return snap.exists() ? snap.data() : null;
       } catch(e) { return null; }
     }
 
-    async function fbSaveEvents(events) {
+    async function fbSave(docName, data) {
       if (!db) return;
-      try {
-        await setDoc(doc(db, "somda", "events"), { list: events });
-      } catch(e) { console.log("저장 실패:", e); }
+      try { await setDoc(doc(db, "somda", docName), data); }
+      catch(e) { console.log("저장 실패:", e); }
     }
 
-    async function fbLoadBanner() {
-      if (!db) return null;
-      try {
-        const snap = await getDoc(doc(db, "somda", "banner"));
-        return snap.exists() ? snap.data().url : null;
-      } catch(e) { return null; }
-    }
-
-    async function fbSaveBanner(dataUrl) {
-      if (!storage || !db) return;
-      try {
-        const storageRef = ref(storage, "somda/banner.jpg");
-        await uploadString(storageRef, dataUrl, "data_url");
-        const url = await getDownloadURL(storageRef);
-        await setDoc(doc(db, "somda", "banner"), { url });
-        return url;
-      } catch(e) { console.log("배너 저장 실패:", e); return null; }
-    }
-
-    // 앱이 로드된 후 Firebase 함수들을 전역으로 노출
-    window._fb = { fbLoadEvents, fbSaveEvents, fbLoadBanner, fbSaveBanner, firebaseReady };
+    window._fb = { fbLoad, fbSave, firebaseReady };
     window.dispatchEvent(new Event("firebase-ready"));
   </script>
 
   <style>
-    /* ====================================================
-       전체 디자인 스타일
-       색상 변경하려면 :root 안의 값을 바꾸세요
-    ==================================================== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --warm: #B5704A;
-      --warm-light: #F0E6DC;
-      --warm-pale: #FAF5F0;
-      --warm-dark: #7A3F20;
-      --warm-mid: #D4956F;
-      --ink: #1A1410;
-      --ink2: #4A3728;
-      --ink3: #8A7060;
-      --line: rgba(181,112,74,0.18);
-      --line2: rgba(181,112,74,0.35);
-      --bg: #FFFCF9;
+      --warm: #B5704A; --warm-light: #F0E6DC; --warm-pale: #FAF5F0;
+      --warm-dark: #7A3F20; --warm-mid: #D4956F;
+      --ink: #1A1410; --ink2: #4A3728; --ink3: #8A7060;
+      --line: rgba(181,112,74,0.18); --line2: rgba(181,112,74,0.35); --bg: #FFFCF9;
     }
-    html, body { height: 100%; font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
+    html, body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); }
     .app { max-width: 480px; margin: 0 auto; background: var(--bg); min-height: 100vh; padding-bottom: 60px; }
 
     /* 배너 */
-    .banner { position: relative; width: 100%; height: 240px; overflow: hidden; background: #2A1F18; }
-    .banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+    .banner { position: relative; width: 100%; height: 200px; overflow: hidden; background: #2A1F18; }
+    .banner-img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: none; }
     .banner-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.55) 100%); }
     .banner-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 22px 20px; }
-    .banner-logo { height: 38px; width: auto; display: block; margin-bottom: 5px; filter: brightness(0) invert(1); opacity: 0.93; }
-    .banner-sub { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; text-transform: uppercase; }
+    .banner-name { font-family: 'Noto Serif KR', serif; font-size: 30px; font-weight: 700; color: rgba(255,255,255,0.93); letter-spacing: 1px; margin-bottom: 4px; }
+    .banner-sub { font-size: 10px; color: rgba(255,255,255,0.55); letter-spacing: 3px; text-transform: uppercase; }
     .banner-lang { position: absolute; top: 13px; right: 14px; display: flex; gap: 5px; }
     .lang-btn { padding: 4px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.7); cursor: pointer; transition: all 0.15s; }
     .lang-btn.active { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.8); }
@@ -154,7 +95,7 @@
     .cal-days-header { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
     .cal-dlabel { text-align: center; font-size: 10px; font-weight: 500; color: var(--ink3); letter-spacing: 0.5px; padding: 4px 0; }
     .cal-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
-    .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; position: relative; transition: all 0.12s; font-size: 13px; font-weight: 400; color: var(--ink); }
+    .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; position: relative; transition: all 0.12s; font-size: 13px; color: var(--ink); }
     .cal-day:hover:not(.other-month) { background: var(--warm-light); }
     .cal-day.other-month { color: var(--ink3); opacity: 0.3; cursor: default; }
     .cal-day.today { background: var(--ink); color: #fff; font-weight: 600; }
@@ -164,17 +105,29 @@
     .cal-day.selected:not(.today) { border: 1.5px solid var(--warm); color: var(--warm-dark); font-weight: 600; }
     .divider { height: 1px; background: var(--line); margin: 18px 0 0; }
 
-    /* 스케쥴 */
+    /* 스케쥴 카드 */
     .sched-section { padding: 18px 22px; }
     .section-label { font-size: 10px; font-weight: 600; color: var(--ink3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
     .sched-date-head { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 14px; font-family: 'Noto Serif KR', serif; }
     .no-event { font-size: 13px; color: var(--ink3); padding: 8px 0 4px; }
     .event-card { border: 0.5px solid var(--line2); border-left: 3px solid var(--warm); border-radius: 0 10px 10px 0; padding: 14px 16px; margin-bottom: 10px; background: var(--bg); }
-    .event-type { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: var(--warm); text-transform: uppercase; margin-bottom: 5px; }
-    .event-title { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; margin-bottom: 10px; letter-spacing: -0.2px; }
+    .event-type { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: var(--warm); text-transform: uppercase; margin-bottom: 6px; }
+    .event-title { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; margin-bottom: 8px; letter-spacing: -0.2px; }
+
+    /* 태그 */
+    .event-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+    .tag-team { background: var(--warm-light); color: var(--warm-dark); }
+    .tag-formation { background: #EEF2F0; color: #3A5C4A; }
+
+    /* 코멘트 */
+    .event-comment { font-size: 12px; color: var(--ink2); font-style: italic; padding: 8px 10px; border-left: 2px solid var(--warm-light); margin-bottom: 10px; line-height: 1.6; background: var(--warm-pale); border-radius: 0 6px 6px 0; }
+
     .event-meta { display: flex; flex-direction: column; gap: 4px; }
     .event-meta-row { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--ink2); }
     .meta-icon { font-size: 13px; margin-top: 1px; color: var(--warm-mid); flex-shrink: 0; }
+    .event-link { color: var(--warm); text-decoration: none; font-size: 12px; }
+    .event-link:hover { text-decoration: underline; }
 
     /* 다가오는 공연 */
     .upcoming-section { padding: 0 22px 20px; }
@@ -186,18 +139,18 @@
     .upcoming-info { flex: 1; }
     .upcoming-title { font-size: 13px; font-weight: 500; color: var(--ink); line-height: 1.4; }
     .upcoming-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+    .upcoming-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+    .upcoming-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; }
 
-    /* 로딩 상태 표시 */
-    .loading-badge { font-size: 11px; color: var(--warm); background: var(--warm-light); padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 12px; }
-
-    /* 모달 (관리자 창, 비번 창 등) */
+    /* 모달 */
     .modal-wrap { display: none; position: fixed; inset: 0; background: rgba(26,20,16,0.6); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
     .modal-wrap.open { display: flex; }
-    .modal-box { background: var(--bg); border-radius: 14px; padding: 26px 22px; width: 100%; max-width: 360px; max-height: 88vh; overflow-y: auto; }
+    .modal-box { background: var(--bg); border-radius: 14px; padding: 24px 20px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; }
     .modal-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 14px; font-family: 'Noto Serif KR', serif; }
     .modal-label { font-size: 10px; color: var(--ink3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; margin-top: 11px; }
     .modal-input { width: 100%; padding: 9px 12px; border: 0.5px solid var(--line2); border-radius: 8px; background: var(--warm-pale); font-size: 13px; color: var(--ink); outline: none; font-family: 'Noto Sans KR', sans-serif; }
     .modal-input:focus { border-color: var(--warm); }
+    textarea.modal-input { resize: vertical; min-height: 70px; line-height: 1.6; }
     .modal-row { display: flex; gap: 8px; margin-top: 12px; }
     .btn-cancel { flex: 1; padding: 10px; border: 0.5px solid var(--line2); border-radius: 8px; background: transparent; font-size: 13px; color: var(--ink3); cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
     .btn-confirm { flex: 1; padding: 10px; border: none; border-radius: 8px; background: var(--ink); font-size: 13px; color: #fff; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; }
@@ -205,13 +158,13 @@
     .err-msg { font-size: 12px; color: #c44; margin-top: 6px; min-height: 16px; }
     select.modal-input { appearance: none; -webkit-appearance: none; }
 
-    /* 관리자 패널 */
+    /* 관리자 */
     .admin-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .admin-title { font-size: 15px; font-weight: 700; color: var(--ink); font-family: 'Noto Serif KR', serif; }
     .admin-close-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--ink3); }
     .admin-badge { display: inline-block; font-size: 10px; padding: 2px 8px; background: var(--warm-light); color: var(--warm-dark); border-radius: 20px; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; }
-    .admin-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-    .admin-tab { flex: 1; padding: 8px 6px; border: 0.5px solid var(--line2); border-radius: 8px; background: transparent; font-size: 12px; color: var(--ink3); cursor: pointer; text-align: center; transition: all 0.12s; font-family: 'Noto Sans KR', sans-serif; }
+    .admin-tabs { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
+    .admin-tab { flex: 1; min-width: 70px; padding: 7px 6px; border: 0.5px solid var(--line2); border-radius: 8px; background: transparent; font-size: 11px; color: var(--ink3); cursor: pointer; text-align: center; transition: all 0.12s; font-family: 'Noto Sans KR', sans-serif; }
     .admin-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
     .event-admin-item { border: 0.5px solid var(--line); border-radius: 10px; padding: 11px 13px; margin-bottom: 7px; background: var(--warm-pale); display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
     .ev-d { font-size: 11px; color: var(--warm); font-weight: 600; margin-bottom: 2px; }
@@ -221,44 +174,51 @@
     .btn-edit-sm { background: var(--warm-light); color: var(--warm-dark); }
     .btn-del-sm { background: #fff5f5; color: #c44; border-color: rgba(200,68,68,0.2); }
 
-    /* 배너 사진 업로드 */
+    /* 태그 관리 */
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag-manage-item { display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 20px; background: var(--warm-light); border: 0.5px solid var(--line2); font-size: 12px; color: var(--ink2); }
+    .tag-manage-del { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 14px; line-height: 1; padding: 0 0 0 2px; }
+    .tag-add-row { display: flex; gap: 6px; margin-top: 8px; }
+    .tag-add-input { flex: 1; padding: 8px 12px; border: 0.5px solid var(--line2); border-radius: 8px; background: var(--warm-pale); font-size: 13px; color: var(--ink); outline: none; font-family: 'Noto Sans KR', sans-serif; }
+    .tag-add-input:focus { border-color: var(--warm); }
+    .tag-add-btn { padding: 8px 14px; border: none; border-radius: 8px; background: var(--warm); color: #fff; font-size: 13px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; white-space: nowrap; }
+
+    /* 체크박스 태그 선택 */
+    .tag-select-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .tag-checkbox { display: none; }
+    .tag-checkbox-label { padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--line2); font-size: 12px; color: var(--ink3); cursor: pointer; transition: all 0.12s; background: var(--warm-pale); }
+    .tag-checkbox:checked + .tag-checkbox-label { background: var(--warm); color: #fff; border-color: var(--warm); }
+
     .photo-upload-area { border: 1.5px dashed var(--line2); border-radius: 12px; padding: 22px 16px; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 10px; background: var(--warm-pale); }
     .photo-upload-area:hover { border-color: var(--warm); background: var(--warm-light); }
     .photo-upload-area i { font-size: 28px; color: var(--warm-mid); display: block; margin-bottom: 8px; }
     .photo-upload-area p { font-size: 12px; color: var(--ink3); line-height: 1.6; }
-    .photo-preview-img { width: 100%; height: 140px; object-fit: cover; object-position: center top; border-radius: 10px; display: block; margin-bottom: 10px; }
+    .photo-preview-img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 10px; }
     .btn-remove { width: 100%; margin-bottom: 6px; padding: 8px; border: 0.5px solid rgba(200,68,68,0.3); border-radius: 8px; background: transparent; font-size: 12px; color: #c44; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
-
-    /* Tabler 아이콘 */
-    @import url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css");
+    .section-divider { height: 1px; background: var(--line); margin: 14px 0; }
+    .sub-section-label { font-size: 11px; font-weight: 600; color: var(--ink3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
   </style>
 </head>
 <body>
-
 <div class="app" id="app">
 
-  <!-- ===== 상단 배너 ===== -->
   <div class="banner" id="banner">
-    <img class="banner-img" id="bannerImg" src="" alt="somda banner" style="opacity:0;transition:opacity 0.4s;display:none">
+    <img class="banner-img" id="bannerImg" src="" alt="">
     <div class="banner-overlay"></div>
     <div class="banner-content">
-      <!-- 로고 — 아래 src 안의 base64 데이터가 로고 이미지예요 -->
-      <div class="banner-logo" id="bannerLogo" style="font-family:'Noto Serif KR',serif;font-size:28px;font-weight:700;color:rgba(255,255,255,0.92);letter-spacing:2px;margin-bottom:5px;">somda</div>
+      <div class="banner-name">somda</div>
       <div class="banner-sub" id="bannerSub">Official Schedule</div>
     </div>
-    <!-- 언어 선택 버튼 -->
     <div class="banner-lang">
       <button class="lang-btn" onclick="setLang('ko')">KOR</button>
       <button class="lang-btn" onclick="setLang('en')">ENG</button>
       <button class="lang-btn" onclick="setLang('pt')">PT</button>
     </div>
-    <!-- 관리자 버튼 (자물쇠) -->
-    <button class="admin-btn" id="adminBtn" onclick="handleAdminClick()" aria-label="관리자">
+    <button class="admin-btn" id="adminBtn" onclick="handleAdminClick()">
       <i class="ti ti-lock"></i>
     </button>
   </div>
 
-  <!-- ===== 달력 ===== -->
   <div class="cal-section">
     <div class="cal-nav">
       <button class="nav-btn" onclick="prevMonth()"><i class="ti ti-chevron-left"></i></button>
@@ -270,133 +230,114 @@
     <div class="divider"></div>
   </div>
 
-  <!-- ===== 선택한 날 스케쥴 ===== -->
   <div class="sched-section" id="schedSection"></div>
 
-  <!-- ===== 다가오는 공연 목록 ===== -->
   <div class="upcoming-section">
     <div class="section-label" id="upcomingLabel"></div>
     <div id="upcomingList"></div>
   </div>
-
 </div>
 
-<!-- ===== 모달들 (화면 위에 뜨는 창들) ===== -->
-
-<!-- 비밀번호 입력 모달 -->
-<div class="modal-wrap" id="pwModal">
-  <div class="modal-box" id="pwBox"></div>
-</div>
-
-<!-- 관리자 패널 모달 -->
-<div class="modal-wrap" id="adminModal">
-  <div class="modal-box" id="adminBox" style="max-width:380px;"></div>
-</div>
-
-<!-- 공연 추가/수정 모달 -->
-<div class="modal-wrap" id="eventModal">
-  <div class="modal-box" id="eventBox"></div>
-</div>
-
-<!-- 숨겨진 파일 업로드 인풋 -->
+<!-- 모달들 -->
+<div class="modal-wrap" id="pwModal"><div class="modal-box" id="pwBox"></div></div>
+<div class="modal-wrap" id="adminModal"><div class="modal-box" id="adminBox" style="max-width:400px;"></div></div>
+<div class="modal-wrap" id="eventModal"><div class="modal-box" id="eventBox"></div></div>
 <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
-
-<!-- =====================================================
-  Tabler 아이콘 폰트 (버튼 아이콘들)
-====================================================== -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 
 <script>
 // =====================================================
-// 🌍 다국어 텍스트 (한국어 / 영어 / 포르투갈어)
-// =====================================================
-const I18N = {
-  ko: {
-    sub: "Official Schedule",
-    days: ["월","화","수","목","금","토","일"],
-    noEvent: "등록된 스케쥴이 없어요",
-    upcoming: "다가오는 공연",
-    todaySched: "이날의 스케쥴",
-    mons: ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],
-    adminTitle: "스케쥴 관리", tabSched: "공연 일정", tabPhoto: "배너 사진",
-    addBtn: "새 공연 추가", logout: "로그아웃",
-    fieldDate: "날짜", fieldType: "공연 유형", fieldTitle: "공연명",
-    fieldTime: "시간", fieldVenue: "장소", fieldWith: "함께 연주하는 뮤지션",
-    save: "저장", cancel: "취소",
-    photoDesc: "탭해서 배너 사진 업로드\n(JPG, PNG 권장)",
-    photoRemove: "사진 제거",
-    loginTitle: "관리자 로그인", pwLabel: "비밀번호", pwPlaceholder: "비밀번호를 입력하세요",
-    loginBtn: "로그인", pwErr: "비밀번호가 올바르지 않아요",
-    required: "날짜, 공연명, 시간, 장소는 필수예요",
-    typeOptions: ["공연","방송","행사","기타"],
-    saving: "저장 중...", saved: "저장됐어요!",
-    monthNames: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
-  },
-  en: {
-    sub: "Official Schedule",
-    days: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
-    noEvent: "No events scheduled",
-    upcoming: "Upcoming Shows",
-    todaySched: "Schedule",
-    mons: ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],
-    adminTitle: "Manage Schedule", tabSched: "Events", tabPhoto: "Banner Photo",
-    addBtn: "Add New Event", logout: "Log Out",
-    fieldDate: "Date", fieldType: "Type", fieldTitle: "Event Name",
-    fieldTime: "Time", fieldVenue: "Venue", fieldWith: "Performing With",
-    save: "Save", cancel: "Cancel",
-    photoDesc: "Tap to upload a banner photo\n(JPG or PNG recommended)",
-    photoRemove: "Remove Photo",
-    loginTitle: "Admin Login", pwLabel: "Password", pwPlaceholder: "Enter password",
-    loginBtn: "Login", pwErr: "Incorrect password",
-    required: "Date, title, time and venue are required",
-    typeOptions: ["Concert","Broadcast","Event","Other"],
-    saving: "Saving...", saved: "Saved!",
-    monthNames: ["January","February","March","April","May","June","July","August","September","October","November","December"],
-  },
-  pt: {
-    sub: "Agenda Oficial",
-    days: ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"],
-    noEvent: "Nenhum evento agendado",
-    upcoming: "Próximas Apresentações",
-    todaySched: "Agenda do Dia",
-    mons: ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"],
-    adminTitle: "Gerenciar Agenda", tabSched: "Eventos", tabPhoto: "Foto do Banner",
-    addBtn: "Adicionar Evento", logout: "Sair",
-    fieldDate: "Data", fieldType: "Tipo", fieldTitle: "Nome do Evento",
-    fieldTime: "Hora", fieldVenue: "Local", fieldWith: "Tocando Com",
-    save: "Salvar", cancel: "Cancelar",
-    photoDesc: "Toque para enviar foto do banner\n(JPG ou PNG recomendado)",
-    photoRemove: "Remover Foto",
-    loginTitle: "Login Admin", pwLabel: "Senha", pwPlaceholder: "Digite a senha",
-    loginBtn: "Entrar", pwErr: "Senha incorreta",
-    required: "Data, título, hora e local são obrigatórios",
-    typeOptions: ["Show","Transmissão","Evento","Outro"],
-    saving: "Salvando...", saved: "Salvo!",
-    monthNames: ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"],
-  }
-};
-
-// =====================================================
-// 🔑 관리자 비밀번호
-// 아래 문자열을 원하는 비밀번호로 바꾸세요!
+// 🔑 관리자 비밀번호 — 원하는 걸로 바꾸세요
 // =====================================================
 const ADMIN_PW = "somda2026";
 
 // =====================================================
-// 앱 상태 변수들
+// 다국어
 // =====================================================
-const EVENTS_KEY  = "somda_events_v3";
-const BANNER_KEY  = "somda_banner_v2";
-const LANG_KEY    = "somda_lang_v1";
-
-const DEFAULT_EVENTS = {
-  "2026-05-31": [{ type:"공연", title:"청춘마이크 수도강원권 태백 황지연못 피아노무대", time:"15:00", venue:"강원 태백 황지연못 피아노무대", with:"솔로" }],
-  "2026-06-07": [{ type:"공연", title:"서울재즈페스티벌 스테이지 B", time:"16:00", venue:"서울 올림픽공원 잔디마당", with:"이지훈 (드럼), 오하윤 (베이스)" }],
-  "2026-06-14": [{ type:"공연", title:"감성 인디 클럽나이트", time:"21:00", venue:"서울 홍대 클럽 FF", with:"솔로" }],
+const I18N = {
+  ko: {
+    sub:"Official Schedule", days:["월","화","수","목","금","토","일"],
+    noEvent:"등록된 스케쥴이 없어요", upcoming:"다가오는 공연", todaySched:"이날의 스케쥴",
+    mons:["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],
+    adminTitle:"스케쥴 관리", tabSched:"공연 일정", tabPhoto:"배너 사진", tabTags:"태그 관리",
+    addBtn:"새 공연 추가", logout:"로그아웃",
+    fieldDate:"날짜", fieldType:"공연 유형", fieldTitle:"공연명", fieldTime:"시간",
+    fieldVenue:"장소", fieldWith:"함께 연주하는 뮤지션", fieldLink:"관련 링크 (선택)",
+    fieldComment:"코멘트 (선택)", fieldTeamTags:"팀 태그", fieldFormationTags:"팀 구성",
+    save:"저장", cancel:"취소",
+    photoDesc:"탭해서 배너 사진 업로드", photoRemove:"사진 제거",
+    loginTitle:"관리자 로그인", pwLabel:"비밀번호", pwPlaceholder:"비밀번호를 입력하세요",
+    loginBtn:"로그인", pwErr:"비밀번호가 올바르지 않아요",
+    required:"날짜, 공연명, 시간, 장소는 필수예요",
+    typeOptions:["공연","방송","행사","기타"],
+    saving:"저장 중...", saved:"저장됐어요!",
+    teamTagsLabel:"팀 태그 목록", formationTagsLabel:"팀 구성 목록",
+    addTagPlaceholder:"태그 이름 입력", addTagBtn:"추가",
+    monthNames:["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+    linkLabel:"링크", commentLabel:"코멘트",
+  },
+  en: {
+    sub:"Official Schedule", days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    noEvent:"No events scheduled", upcoming:"Upcoming Shows", todaySched:"Schedule",
+    mons:["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],
+    adminTitle:"Manage Schedule", tabSched:"Events", tabPhoto:"Banner", tabTags:"Tags",
+    addBtn:"Add New Event", logout:"Log Out",
+    fieldDate:"Date", fieldType:"Type", fieldTitle:"Event Name", fieldTime:"Time",
+    fieldVenue:"Venue", fieldWith:"Performing With", fieldLink:"Related Link (optional)",
+    fieldComment:"Comment (optional)", fieldTeamTags:"Team Tags", fieldFormationTags:"Formation",
+    save:"Save", cancel:"Cancel",
+    photoDesc:"Tap to upload banner photo", photoRemove:"Remove Photo",
+    loginTitle:"Admin Login", pwLabel:"Password", pwPlaceholder:"Enter password",
+    loginBtn:"Login", pwErr:"Incorrect password",
+    required:"Date, title, time and venue are required",
+    typeOptions:["Concert","Broadcast","Event","Other"],
+    saving:"Saving...", saved:"Saved!",
+    teamTagsLabel:"Team Tags", formationTagsLabel:"Formation Tags",
+    addTagPlaceholder:"Enter tag name", addTagBtn:"Add",
+    monthNames:["January","February","March","April","May","June","July","August","September","October","November","December"],
+    linkLabel:"Link", commentLabel:"Comment",
+  },
+  pt: {
+    sub:"Agenda Oficial", days:["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"],
+    noEvent:"Nenhum evento agendado", upcoming:"Próximas Apresentações", todaySched:"Agenda do Dia",
+    mons:["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"],
+    adminTitle:"Gerenciar Agenda", tabSched:"Eventos", tabPhoto:"Banner", tabTags:"Tags",
+    addBtn:"Adicionar Evento", logout:"Sair",
+    fieldDate:"Data", fieldType:"Tipo", fieldTitle:"Nome", fieldTime:"Hora",
+    fieldVenue:"Local", fieldWith:"Tocando Com", fieldLink:"Link (opcional)",
+    fieldComment:"Comentário (opcional)", fieldTeamTags:"Tags do Grupo", fieldFormationTags:"Formação",
+    save:"Salvar", cancel:"Cancelar",
+    photoDesc:"Toque para enviar foto do banner", photoRemove:"Remover Foto",
+    loginTitle:"Login Admin", pwLabel:"Senha", pwPlaceholder:"Digite a senha",
+    loginBtn:"Entrar", pwErr:"Senha incorreta",
+    required:"Data, título, hora e local são obrigatórios",
+    typeOptions:["Show","Transmissão","Evento","Outro"],
+    saving:"Salvando...", saved:"Salvo!",
+    teamTagsLabel:"Tags do Grupo", formationTagsLabel:"Tags de Formação",
+    addTagPlaceholder:"Nome da tag", addTagBtn:"Adicionar",
+    monthNames:["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"],
+    linkLabel:"Link", commentLabel:"Comentário",
+  }
 };
 
-let EVENTS       = loadLocal(EVENTS_KEY, JSON.stringify(DEFAULT_EVENTS));
-let lang         = loadLocalStr(LANG_KEY, "ko");
+// =====================================================
+// 기본 데이터
+// =====================================================
+const KEYS = { events:"somda_events_v4", banner:"somda_banner_v2", lang:"somda_lang_v1", teamTags:"somda_team_tags_v1", formationTags:"somda_formation_tags_v1" };
+
+const DEFAULT_EVENTS = {
+  "2026-05-31":[{ type:"공연", title:"청춘마이크 수도강원권 태백 황지연못 피아노무대", time:"15:00", venue:"강원 태백 황지연못 피아노무대", with:"솔로", link:"", comment:"", teamTags:["솜다"], formationTags:["솔로"] }],
+  "2026-06-07":[{ type:"공연", title:"서울재즈페스티벌 스테이지 B", time:"16:00", venue:"서울 올림픽공원 잔디마당", with:"이지훈 (드럼), 오하윤 (베이스)", link:"", comment:"", teamTags:["솜다"], formationTags:["트리오"] }],
+};
+const DEFAULT_TEAM_TAGS = ["솜다","루아르"];
+const DEFAULT_FORMATION_TAGS = ["솔로","듀오","트리오","밴드"];
+
+// =====================================================
+// 상태
+// =====================================================
+let EVENTS       = loadLocal(KEYS.events, DEFAULT_EVENTS);
+let TEAM_TAGS    = loadLocalArr(KEYS.teamTags, DEFAULT_TEAM_TAGS);
+let FORM_TAGS    = loadLocalArr(KEYS.formationTags, DEFAULT_FORMATION_TAGS);
+let lang         = loadLocalStr(KEYS.lang, "ko");
 let isAdmin      = false;
 let adminTab     = "sched";
 let curYear      = new Date().getFullYear();
@@ -406,241 +347,165 @@ let selectedDate = null;
 const today    = new Date();
 const todayKey = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 
-// =====================================================
-// 로컬 스토리지 유틸
-// =====================================================
-function loadLocal(key, fallback) {
-  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : JSON.parse(fallback); }
-  catch(e) { return JSON.parse(fallback); }
-}
-function loadLocalStr(key, fallback) {
-  try { return localStorage.getItem(key) || fallback; } catch(e) { return fallback; }
-}
-function saveLocal(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
-}
-function saveLocalStr(key, val) {
-  try { localStorage.setItem(key, val); } catch(e) {}
-}
-
-function pad(n) { return String(n).padStart(2, "0"); }
+function loadLocal(key, fallback) { try { const s=localStorage.getItem(key); return s?JSON.parse(s):JSON.parse(JSON.stringify(fallback)); } catch(e) { return JSON.parse(JSON.stringify(fallback)); } }
+function loadLocalArr(key, fallback) { try { const s=localStorage.getItem(key); return s?JSON.parse(s):[...fallback]; } catch(e) { return [...fallback]; } }
+function loadLocalStr(key, fallback) { try { return localStorage.getItem(key)||fallback; } catch(e) { return fallback; } }
+function saveLocal(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+function saveLocalStr(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+function pad(n) { return String(n).padStart(2,"0"); }
 function t() { return I18N[lang]; }
-function dk(y, m, d) { return `${y}-${pad(m)}-${pad(d)}`; }
+function dk(y,m,d) { return `${y}-${pad(m)}-${pad(d)}`; }
 
 // =====================================================
-// Firebase와 동기화 (앱 시작 시 한 번)
+// Firebase 동기화
 // =====================================================
 window.addEventListener("firebase-ready", async () => {
-  if (!window._fb || !window._fb.firebaseReady) return;
-  const { fbLoadEvents, fbLoadBanner } = window._fb;
+  if (!window._fb?.firebaseReady) return;
+  const { fbLoad } = window._fb;
 
-  // 서버에서 일정 불러오기
-  const serverEvents = await fbLoadEvents();
-  if (serverEvents) {
-    EVENTS = serverEvents;
-    saveLocal(EVENTS_KEY, EVENTS);
-    renderCal();
-    renderUpcoming();
-    if (selectedDate) renderSched(selectedDate);
+  const evData = await fbLoad("events");
+  if (evData?.list) { EVENTS = evData.list; saveLocal(KEYS.events, EVENTS); }
+
+  const tagsData = await fbLoad("tags");
+  if (tagsData) {
+    if (tagsData.teamTags) { TEAM_TAGS = tagsData.teamTags; saveLocal(KEYS.teamTags, TEAM_TAGS); }
+    if (tagsData.formationTags) { FORM_TAGS = tagsData.formationTags; saveLocal(KEYS.formationTags, FORM_TAGS); }
   }
 
-  // 서버에서 배너 URL 불러오기
-  const bannerUrl = await fbLoadBanner();
-  if (bannerUrl) {
+  const bannerData = await fbLoad("banner");
+  if (bannerData?.url) {
     const img = document.getElementById("bannerImg");
-    img.src = bannerUrl;
-    img.style.opacity = "1";img.style.display = "block";
+    img.src = bannerData.url; img.style.display = "block";
   }
+
+  renderCal(); renderUpcoming();
+  if (selectedDate) renderSched(selectedDate);
 });
 
-// =====================================================
-// 저장 함수 (로컬 + Firebase 동시)
-// =====================================================
-async function saveEvents(ev) {
-  saveLocal(EVENTS_KEY, ev);
-  if (window._fb && window._fb.firebaseReady) {
-    await window._fb.fbSaveEvents(ev);
-  }
-}
-
-async function saveBannerData(dataUrl) {
-  saveLocalStr(BANNER_KEY, dataUrl);
-  if (window._fb && window._fb.firebaseReady) {
-    const url = await window._fb.fbSaveBanner(dataUrl);
-    return url || dataUrl;
-  }
-  return dataUrl;
+async function fbSaveAll() {
+  if (!window._fb?.firebaseReady) return;
+  const { fbSave } = window._fb;
+  await fbSave("events", { list: EVENTS });
+  await fbSave("tags", { teamTags: TEAM_TAGS, formationTags: FORM_TAGS });
 }
 
 // =====================================================
-// 언어 변경
+// 언어
 // =====================================================
 function setLang(l) {
-  lang = l;
-  saveLocalStr(LANG_KEY, l);
-  document.querySelectorAll(".lang-btn").forEach((b, i) => {
-    b.classList.toggle("active", ["ko","en","pt"][i] === l);
-  });
+  lang = l; saveLocalStr(KEYS.lang, l);
+  document.querySelectorAll(".lang-btn").forEach((b,i) => b.classList.toggle("active", ["ko","en","pt"][i]===l));
   document.getElementById("bannerSub").textContent = t().sub;
-  renderCal();
-  renderUpcoming();
+  renderCal(); renderUpcoming();
   if (selectedDate) renderSched(selectedDate);
   else document.getElementById("schedSection").innerHTML = "";
 }
 
 // =====================================================
-// 달력 렌더링
+// 달력
 // =====================================================
 function renderCal() {
   const T = t();
-  const mLabel = document.getElementById("calMonthLabel");
-  if (lang === "ko") mLabel.textContent = `${curYear}. ${pad(curMonth)}`;
-  else if (lang === "en") mLabel.textContent = `${T.monthNames[curMonth-1]} ${curYear}`;
-  else mLabel.textContent = `${T.monthNames[curMonth-1]} ${curYear}`;
+  const ml = document.getElementById("calMonthLabel");
+  if (lang==="ko") ml.textContent = `${curYear}. ${pad(curMonth)}`;
+  else ml.textContent = `${T.monthNames[curMonth-1]} ${curYear}`;
 
-  // 요일 헤더
-  const dh = document.getElementById("daysHeader");
-  dh.innerHTML = T.days.map((d, i) =>
+  document.getElementById("daysHeader").innerHTML = T.days.map((d,i) =>
     `<div class="cal-dlabel"${i>=5?' style="color:var(--warm-mid)"':''}>${d}</div>`
   ).join("");
 
-  // 날짜 그리드
   const grid = document.getElementById("calGrid");
   grid.innerHTML = "";
-  const firstDay = new Date(curYear, curMonth-1, 1).getDay();
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
-  const daysInMonth = new Date(curYear, curMonth, 0).getDate();
-  const prevMonthDays = new Date(curYear, curMonth-1, 0).getDate();
+  const fd = new Date(curYear,curMonth-1,1).getDay();
+  const off = fd===0?6:fd-1;
+  const dim = new Date(curYear,curMonth,0).getDate();
+  const pmd = new Date(curYear,curMonth-1,0).getDate();
 
-  // 이전 달 날짜 (흐리게)
-  for (let i = 0; i < offset; i++) {
-    const d = document.createElement("div");
-    d.className = "cal-day other-month";
-    d.textContent = prevMonthDays - offset + 1 + i;
-    grid.appendChild(d);
-  }
-
-  // 이번 달 날짜
-  for (let d = 1; d <= daysInMonth; d++) {
-    const key = dk(curYear, curMonth, d);
+  for (let i=0;i<off;i++) { const d=document.createElement("div"); d.className="cal-day other-month"; d.textContent=pmd-off+1+i; grid.appendChild(d); }
+  for (let d=1;d<=dim;d++) {
+    const key = dk(curYear,curMonth,d);
     const div = document.createElement("div");
-    div.className = "cal-day";
-    div.textContent = d;
-    if (key === todayKey) div.classList.add("today");
-    if (key === selectedDate) div.classList.add("selected");
-    if (EVENTS[key] && EVENTS[key].length) {
-      div.classList.add("has-event");
-      const dot = document.createElement("span");
-      dot.className = "dot";
-      div.appendChild(dot);
-    }
-    div.addEventListener("click", () => selectDate(key));
+    div.className = "cal-day"; div.textContent = d;
+    if (key===todayKey) div.classList.add("today");
+    if (key===selectedDate) div.classList.add("selected");
+    if (EVENTS[key]?.length) { div.classList.add("has-event"); const dot=document.createElement("span"); dot.className="dot"; div.appendChild(dot); }
+    div.addEventListener("click", ()=>selectDate(key));
     grid.appendChild(div);
   }
-
-  // 다음 달 날짜 (흐리게)
-  const total = offset + daysInMonth;
-  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
-  for (let i = 1; i <= remaining; i++) {
-    const d = document.createElement("div");
-    d.className = "cal-day other-month";
-    d.textContent = i;
-    grid.appendChild(d);
-  }
+  const rem = (off+dim)%7===0?0:7-(off+dim)%7;
+  for (let i=1;i<=rem;i++) { const d=document.createElement("div"); d.className="cal-day other-month"; d.textContent=i; grid.appendChild(d); }
 }
 
-function prevMonth() {
-  curMonth--;
-  if (curMonth < 1) { curMonth = 12; curYear--; }
-  selectedDate = null;
-  renderCal();
-  document.getElementById("schedSection").innerHTML = "";
-}
-function nextMonth() {
-  curMonth++;
-  if (curMonth > 12) { curMonth = 1; curYear++; }
-  selectedDate = null;
-  renderCal();
-  document.getElementById("schedSection").innerHTML = "";
-}
+function prevMonth() { curMonth--; if(curMonth<1){curMonth=12;curYear--;} selectedDate=null; renderCal(); document.getElementById("schedSection").innerHTML=""; }
+function nextMonth() { curMonth++; if(curMonth>12){curMonth=1;curYear++;} selectedDate=null; renderCal(); document.getElementById("schedSection").innerHTML=""; }
 
-// =====================================================
-// 날짜 선택 & 스케쥴 표시
-// =====================================================
-function selectDate(key) {
-  selectedDate = key;
-  renderCal();
-  renderSched(key);
-}
+function selectDate(key) { selectedDate=key; renderCal(); renderSched(key); }
 
 function fmtDate(s) {
-  const [y, m, d] = s.split("-").map(Number);
-  const T = t();
-  const dt = new Date(y, m-1, d);
-  if (lang === "ko") {
-    const dw = ["일","월","화","수","목","금","토"][dt.getDay()];
-    return `${m}.${pad(d)} (${dw})`;
-  } else if (lang === "en") {
-    const dw = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()];
-    return `${T.mons[m-1]} ${d}, ${y} (${dw})`;
-  } else {
-    const dw = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][dt.getDay()];
-    return `${d}/${m}/${y} (${dw})`;
-  }
+  const [y,m,d]=s.split("-").map(Number);
+  const T=t(); const dt=new Date(y,m-1,d);
+  if(lang==="ko"){const dw=["일","월","화","수","목","금","토"][dt.getDay()]; return `${m}.${pad(d)} (${dw})`;}
+  else if(lang==="en"){const dw=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()]; return `${T.mons[m-1]} ${d}, ${y} (${dw})`;}
+  else{const dw=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][dt.getDay()]; return `${d}/${m}/${y} (${dw})`;}
 }
 
+// =====================================================
+// 스케쥴 카드 렌더링
+// =====================================================
 function renderSched(key) {
   const T = t();
   const sec = document.getElementById("schedSection");
   const evs = EVENTS[key];
-  let h = `<div class="section-label">${T.todaySched}</div>
-            <div class="sched-date-head">${fmtDate(key)}</div>`;
-  if (!evs || !evs.length) {
-    h += `<div class="no-event">${T.noEvent}</div>`;
-  } else {
-    evs.forEach(ev => {
-      h += `<div class="event-card">
-        <div class="event-type">${ev.type}</div>
-        <div class="event-title">${ev.title}</div>
-        <div class="event-meta">
-          <div class="event-meta-row"><i class="ti ti-clock meta-icon"></i><span>${ev.time}</span></div>
-          <div class="event-meta-row"><i class="ti ti-map-pin meta-icon"></i><span>${ev.venue}</span></div>
-          <div class="event-meta-row"><i class="ti ti-users meta-icon"></i><span>${ev.with}</span></div>
-        </div>
-      </div>`;
-    });
-  }
+  let h = `<div class="section-label">${T.todaySched}</div><div class="sched-date-head">${fmtDate(key)}</div>`;
+  if (!evs?.length) { h+=`<div class="no-event">${T.noEvent}</div>`; sec.innerHTML=h; return; }
+  evs.forEach(ev => {
+    // 태그
+    const teamTagsHtml = (ev.teamTags||[]).map(tag=>`<span class="tag tag-team">${tag}</span>`).join("");
+    const formTagsHtml = (ev.formationTags||[]).map(tag=>`<span class="tag tag-formation">${tag}</span>`).join("");
+    const tagsHtml = (teamTagsHtml||formTagsHtml) ? `<div class="event-tags">${teamTagsHtml}${formTagsHtml}</div>` : "";
+    // 코멘트
+    const commentHtml = ev.comment ? `<div class="event-comment">${ev.comment}</div>` : "";
+    // 링크
+    const linkHtml = ev.link ? `<div class="event-meta-row"><i class="ti ti-link meta-icon"></i><a class="event-link" href="${ev.link}" target="_blank" rel="noopener">${T.linkLabel}</a></div>` : "";
+
+    h += `<div class="event-card">
+      <div class="event-type">${ev.type}</div>
+      <div class="event-title">${ev.title}</div>
+      ${tagsHtml}
+      ${commentHtml}
+      <div class="event-meta">
+        <div class="event-meta-row"><i class="ti ti-clock meta-icon"></i><span>${ev.time}</span></div>
+        <div class="event-meta-row"><i class="ti ti-map-pin meta-icon"></i><span>${ev.venue}</span></div>
+        <div class="event-meta-row"><i class="ti ti-users meta-icon"></i><span>${ev.with}</span></div>
+        ${linkHtml}
+      </div>
+    </div>`;
+  });
   sec.innerHTML = h;
 }
 
 // =====================================================
-// 다가오는 공연 목록
+// 다가오는 공연
 // =====================================================
 function renderUpcoming() {
   const T = t();
   document.getElementById("upcomingLabel").textContent = T.upcoming;
   const now = new Date(); now.setHours(0,0,0,0);
-  const list = Object.entries(EVENTS)
-    .filter(([k]) => new Date(k) >= now)
-    .sort(([a],[b]) => new Date(a) - new Date(b))
-    .slice(0, 6);
-
+  const list = Object.entries(EVENTS).filter(([k])=>new Date(k)>=now).sort(([a],[b])=>new Date(a)-new Date(b)).slice(0,6);
   const ul = document.getElementById("upcomingList");
-  if (!list.length) {
-    ul.innerHTML = `<div class="no-event">${T.noEvent}</div>`;
-    return;
-  }
-  ul.innerHTML = list.map(([k, evs]) => {
-    const [y, m, d] = k.split("-").map(Number);
-    const ev = evs[0];
+  if (!list.length) { ul.innerHTML=`<div class="no-event">${T.noEvent}</div>`; return; }
+  ul.innerHTML = list.map(([k,evs]) => {
+    const [y,m,d]=k.split("-").map(Number); const ev=evs[0];
+    const tagsHtml = [
+      ...(ev.teamTags||[]).map(tg=>`<span class="upcoming-tag tag-team">${tg}</span>`),
+      ...(ev.formationTags||[]).map(tg=>`<span class="upcoming-tag tag-formation">${tg}</span>`)
+    ].join("");
     return `<div class="upcoming-item" onclick="goToDate('${k}')">
-      <div class="upcoming-date-badge">
-        <div class="badge-day">${d}</div>
-        <div class="badge-mon">${T.mons[m-1]}</div>
-      </div>
+      <div class="upcoming-date-badge"><div class="badge-day">${d}</div><div class="badge-mon">${T.mons[m-1]}</div></div>
       <div class="upcoming-info">
         <div class="upcoming-title">${ev.title}</div>
         <div class="upcoming-sub">${ev.time} · ${ev.venue.split(" ").slice(0,3).join(" ")}</div>
+        ${tagsHtml?`<div class="upcoming-tags">${tagsHtml}</div>`:""}
       </div>
       <i class="ti ti-chevron-right" style="font-size:13px;color:var(--line2)"></i>
     </div>`;
@@ -648,42 +513,20 @@ function renderUpcoming() {
 }
 
 function goToDate(key) {
-  const [y, m] = key.split("-").map(Number);
-  curYear = y; curMonth = m;
+  const [y,m]=key.split("-").map(Number); curYear=y; curMonth=m;
   selectDate(key);
-  document.getElementById("app").scrollIntoView({ behavior: "smooth" });
+  document.getElementById("app").scrollIntoView({behavior:"smooth"});
 }
 
 // =====================================================
-// 배너 사진 초기화
+// 관리자
 // =====================================================
-function initBanner() {
-  const saved = loadLocalStr(BANNER_KEY, "");
-  if (saved) {
-    const img = document.getElementById("bannerImg");
-    img.src = saved;
-    img.style.opacity = "1";img.style.display = "block";
-  }
-}
+function handleAdminClick() { if(isAdmin) openAdminPanel(); else showPwModal(); }
 
-// =====================================================
-// 관리자 버튼 클릭
-// =====================================================
-function handleAdminClick() {
-  if (isAdmin) openAdminPanel();
-  else showPwModal();
-}
-
-// =====================================================
-// 비밀번호 모달
-// =====================================================
 function showPwModal() {
-  const T = t();
-  const modal = document.getElementById("pwModal");
-  document.getElementById("pwBox").innerHTML = `
-    <div class="modal-title">
-      <i class="ti ti-lock" style="margin-right:6px;color:var(--warm)"></i>${T.loginTitle}
-    </div>
+  const T=t();
+  document.getElementById("pwBox").innerHTML=`
+    <div class="modal-title"><i class="ti ti-lock" style="margin-right:6px;color:var(--warm)"></i>${T.loginTitle}</div>
     <div class="modal-label">${T.pwLabel}</div>
     <input class="modal-input" type="password" id="pwInput" placeholder="${T.pwPlaceholder}">
     <div class="err-msg" id="pwErr"></div>
@@ -691,57 +534,44 @@ function showPwModal() {
       <button class="btn-cancel" onclick="closeModal('pwModal')">${T.cancel}</button>
       <button class="btn-confirm" onclick="checkPw()">${T.loginBtn}</button>
     </div>`;
-  modal.classList.add("open");
-  setTimeout(() => {
-    const el = document.getElementById("pwInput");
-    if (el) {
-      el.focus();
-      el.addEventListener("keydown", e => { if (e.key === "Enter") checkPw(); });
-    }
-  }, 80);
+  document.getElementById("pwModal").classList.add("open");
+  setTimeout(()=>{ const el=document.getElementById("pwInput"); if(el){el.focus(); el.addEventListener("keydown",e=>{if(e.key==="Enter")checkPw();});} },80);
 }
 
 function checkPw() {
-  const T = t();
-  const v = document.getElementById("pwInput").value;
-  if (v === ADMIN_PW) {
-    isAdmin = true;
-    closeModal("pwModal");
-    document.getElementById("adminBtn").innerHTML = `<i class="ti ti-settings"></i>`;
-    openAdminPanel();
-  } else {
-    document.getElementById("pwErr").textContent = T.pwErr;
-  }
+  const T=t(); const v=document.getElementById("pwInput").value;
+  if(v===ADMIN_PW){ isAdmin=true; closeModal("pwModal"); document.getElementById("adminBtn").innerHTML=`<i class="ti ti-settings"></i>`; openAdminPanel(); }
+  else document.getElementById("pwErr").textContent=T.pwErr;
 }
 
-// =====================================================
-// 관리자 패널
-// =====================================================
-function openAdminPanel() {
-  document.getElementById("adminModal").classList.add("open");
-  renderAdminPanel();
-}
+function openAdminPanel() { document.getElementById("adminModal").classList.add("open"); renderAdminPanel(); }
 
 function renderAdminPanel() {
-  const T = t();
-  const sorted = Object.entries(EVENTS).sort(([a],[b]) => new Date(a) - new Date(b));
-  const savedBanner = loadLocalStr(BANNER_KEY, "");
+  const T=t();
+  const sorted=Object.entries(EVENTS).sort(([a],[b])=>new Date(a)-new Date(b));
+  const savedBanner=loadLocalStr(KEYS.banner,"");
 
-  const evHtml = sorted.map(([k, evs]) =>
-    evs.map((ev, i) => `
-      <div class="event-admin-item">
-        <div>
-          <div class="ev-d">${fmtDate(k)}</div>
-          <div class="ev-t">${ev.title}</div>
-        </div>
-        <div class="event-admin-actions">
-          <div class="btn-edit-sm" onclick="openEditEvent('${k}',${i})"><i class="ti ti-edit"></i></div>
-          <div class="btn-del-sm" onclick="deleteEvent('${k}',${i})"><i class="ti ti-trash"></i></div>
-        </div>
-      </div>`).join("")
-  ).join("") || `<div class="no-event">${T.noEvent}</div>`;
+  const evHtml = sorted.map(([k,evs])=>evs.map((ev,i)=>`
+    <div class="event-admin-item">
+      <div><div class="ev-d">${fmtDate(k)}</div><div class="ev-t">${ev.title}</div>
+      ${(ev.teamTags||[]).concat(ev.formationTags||[]).map(tg=>`<span class="tag tag-team" style="font-size:10px;padding:2px 6px;margin-right:3px;margin-top:3px;display:inline-block">${tg}</span>`).join("")}
+      </div>
+      <div class="event-admin-actions">
+        <div class="btn-edit-sm" onclick="openEditEvent('${k}',${i})"><i class="ti ti-edit"></i></div>
+        <div class="btn-del-sm" onclick="deleteEvent('${k}',${i})"><i class="ti ti-trash"></i></div>
+      </div>
+    </div>`).join("")).join("") || `<div class="no-event">${T.noEvent}</div>`;
 
-  document.getElementById("adminBox").innerHTML = `
+  const teamTagsHtml = TEAM_TAGS.map((tag,i)=>`
+    <div class="tag-manage-item">${tag}
+      <button class="tag-manage-del" onclick="deleteTag('team',${i})"><i class="ti ti-x" style="font-size:11px"></i></button>
+    </div>`).join("");
+  const formTagsHtml = FORM_TAGS.map((tag,i)=>`
+    <div class="tag-manage-item">${tag}
+      <button class="tag-manage-del" onclick="deleteTag('form',${i})"><i class="ti ti-x" style="font-size:11px"></i></button>
+    </div>`).join("");
+
+  document.getElementById("adminBox").innerHTML=`
     <div class="admin-head">
       <div class="admin-title">${T.adminTitle}</div>
       <button class="admin-close-btn" onclick="closeModal('adminModal')"><i class="ti ti-x"></i></button>
@@ -749,84 +579,103 @@ function renderAdminPanel() {
     <span class="admin-badge">ADMIN MODE</span>
     <div class="admin-tabs">
       <button class="admin-tab${adminTab==="sched"?" active":""}" onclick="switchAdminTab('sched')">${T.tabSched}</button>
+      <button class="admin-tab${adminTab==="tags"?" active":""}" onclick="switchAdminTab('tags')">${T.tabTags}</button>
       <button class="admin-tab${adminTab==="photo"?" active":""}" onclick="switchAdminTab('photo')">${T.tabPhoto}</button>
     </div>
 
     <!-- 공연 탭 -->
-    <div id="adminSchedTab" style="${adminTab==="sched"?"":"display:none"}">
-      <button class="btn-warm" onclick="openAddEvent()">
-        <i class="ti ti-plus" style="margin-right:4px"></i>${T.addBtn}
-      </button>
+    <div style="${adminTab==="sched"?"":"display:none"}">
+      <button class="btn-warm" onclick="openAddEvent()"><i class="ti ti-plus" style="margin-right:4px"></i>${T.addBtn}</button>
       <div style="margin-top:12px">${evHtml}</div>
     </div>
 
-    <!-- 배너 사진 탭 -->
-    <div id="adminPhotoTab" style="${adminTab==="photo"?"":"display:none"}">
-      ${savedBanner ? `<img class="photo-preview-img" id="photoPreviewImg" src="${savedBanner}" alt="">` : ""}
-      <div class="photo-upload-area" onclick="document.getElementById('photoFileInput').click()">
-        <i class="ti ti-photo"></i>
-        <p>${T.photoDesc}</p>
+    <!-- 태그 관리 탭 -->
+    <div style="${adminTab==="tags"?"":"display:none"}">
+      <div class="sub-section-label">${T.teamTagsLabel}</div>
+      <div class="tag-list">${teamTagsHtml}</div>
+      <div class="tag-add-row">
+        <input class="tag-add-input" id="newTeamTag" placeholder="${T.addTagPlaceholder}" onkeydown="if(event.key==='Enter')addTag('team')">
+        <button class="tag-add-btn" onclick="addTag('team')">${T.addTagBtn}</button>
       </div>
-      ${savedBanner ? `<button class="btn-remove" onclick="removeBanner()">${T.photoRemove}</button>` : ""}
+      <div class="section-divider"></div>
+      <div class="sub-section-label">${T.formationTagsLabel}</div>
+      <div class="tag-list">${formTagsHtml}</div>
+      <div class="tag-add-row">
+        <input class="tag-add-input" id="newFormTag" placeholder="${T.addTagPlaceholder}" onkeydown="if(event.key==='Enter')addTag('form')">
+        <button class="tag-add-btn" onclick="addTag('form')">${T.addTagBtn}</button>
+      </div>
+    </div>
+
+    <!-- 배너 사진 탭 -->
+    <div style="${adminTab==="photo"?"":"display:none"}">
+      ${savedBanner?`<img class="photo-preview-img" src="${savedBanner}" alt="">`:""}
+      <div class="photo-upload-area" onclick="document.getElementById('photoFileInput').click()">
+        <i class="ti ti-photo"></i><p>${T.photoDesc}</p>
+      </div>
+      ${savedBanner?`<button class="btn-remove" onclick="removeBanner()">${T.photoRemove}</button>`:""}
     </div>
 
     <button class="btn-cancel" style="width:100%;margin-top:14px" onclick="doLogout()">${T.logout}</button>`;
 }
 
-function switchAdminTab(tab) {
-  adminTab = tab;
+function switchAdminTab(tab) { adminTab=tab; renderAdminPanel(); }
+
+// =====================================================
+// 태그 관리
+// =====================================================
+async function addTag(type) {
+  const inputId = type==="team"?"newTeamTag":"newFormTag";
+  const val = document.getElementById(inputId)?.value.trim();
+  if (!val) return;
+  if (type==="team") { if(!TEAM_TAGS.includes(val)) TEAM_TAGS.push(val); saveLocal(KEYS.teamTags, TEAM_TAGS); }
+  else { if(!FORM_TAGS.includes(val)) FORM_TAGS.push(val); saveLocal(KEYS.formationTags, FORM_TAGS); }
+  await fbSaveAll();
+  renderAdminPanel();
+}
+
+async function deleteTag(type, idx) {
+  if (type==="team") { TEAM_TAGS.splice(idx,1); saveLocal(KEYS.teamTags, TEAM_TAGS); }
+  else { FORM_TAGS.splice(idx,1); saveLocal(KEYS.formationTags, FORM_TAGS); }
+  await fbSaveAll();
   renderAdminPanel();
 }
 
 // =====================================================
-// 배너 사진 처리
+// 공연 추가/수정
 // =====================================================
-async function handlePhotoUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    const dataUrl = ev.target.result;
-    const finalUrl = await saveBannerData(dataUrl);
-    const img = document.getElementById("bannerImg");
-    img.src = finalUrl;
-    img.style.opacity = "1";
-    renderAdminPanel();
-  };
-  reader.readAsDataURL(file);
-  e.target.value = "";
+function tagCheckboxes(selectedTeam=[], selectedForm=[]) {
+  const T=t();
+  const teamHtml = TEAM_TAGS.map((tag,i)=>`
+    <input type="checkbox" class="tag-checkbox" id="tt${i}" value="${tag}" ${selectedTeam.includes(tag)?"checked":""}>
+    <label class="tag-checkbox-label" for="tt${i}">${tag}</label>`).join("");
+  const formHtml = FORM_TAGS.map((tag,i)=>`
+    <input type="checkbox" class="tag-checkbox" id="ft${i}" value="${tag}" ${selectedForm.includes(tag)?"checked":""}>
+    <label class="tag-checkbox-label" for="ft${i}">${tag}</label>`).join("");
+  return `
+    <div class="modal-label">${T.fieldTeamTags}</div>
+    <div class="tag-select-group">${teamHtml||'<span style="font-size:12px;color:var(--ink3)">태그 없음</span>'}</div>
+    <div class="modal-label">${T.fieldFormationTags}</div>
+    <div class="tag-select-group">${formHtml||'<span style="font-size:12px;color:var(--ink3)">태그 없음</span>'}</div>`;
 }
 
-function removeBanner() {
-  saveLocalStr(BANNER_KEY, "");
-  const img = document.getElementById("bannerImg");
-  img.src = "";
-  img.style.opacity = "0";
-  renderAdminPanel();
+function getSelectedTags(prefix, list) {
+  return list.filter((_,i)=>document.getElementById(`${prefix}${i}`)?.checked).map((_,i)=>list[i]);
 }
 
-// =====================================================
-// 공연 추가
-// =====================================================
 function openAddEvent() {
-  const T = t();
-  closeModal("adminModal");
-  document.getElementById("eventBox").innerHTML = `
+  const T=t(); closeModal("adminModal");
+  document.getElementById("eventBox").innerHTML=`
     <div class="modal-title">${T.addBtn}</div>
-    <div class="modal-label">${T.fieldDate}</div>
-    <input class="modal-input" type="date" id="ev-date">
+    <div class="modal-label">${T.fieldDate}</div><input class="modal-input" type="date" id="ev-date">
     <div class="modal-label">${T.fieldType}</div>
-    <select class="modal-input" id="ev-type">
-      ${T.typeOptions.map(o => `<option>${o}</option>`).join("")}
-    </select>
-    <div class="modal-label">${T.fieldTitle}</div>
-    <input class="modal-input" id="ev-title" placeholder="${T.fieldTitle}">
-    <div class="modal-label">${T.fieldTime}</div>
-    <input class="modal-input" id="ev-time" placeholder="19:00">
-    <div class="modal-label">${T.fieldVenue}</div>
-    <input class="modal-input" id="ev-venue" placeholder="${T.fieldVenue}">
-    <div class="modal-label">${T.fieldWith}</div>
-    <input class="modal-input" id="ev-with" placeholder="${T.fieldWith}">
+    <select class="modal-input" id="ev-type">${T.typeOptions.map(o=>`<option>${o}</option>`).join("")}</select>
+    <div class="modal-label">${T.fieldTitle}</div><input class="modal-input" id="ev-title" placeholder="${T.fieldTitle}">
+    <div class="modal-label">${T.fieldTime}</div><input class="modal-input" id="ev-time" placeholder="19:00">
+    <div class="modal-label">${T.fieldVenue}</div><input class="modal-input" id="ev-venue" placeholder="${T.fieldVenue}">
+    <div class="modal-label">${T.fieldWith}</div><input class="modal-input" id="ev-with" placeholder="${T.fieldWith}">
+    <div class="modal-label">${T.fieldLink}</div><input class="modal-input" id="ev-link" placeholder="https://...">
+    <div class="modal-label">${T.fieldComment}</div><textarea class="modal-input" id="ev-comment" placeholder="${T.fieldComment}"></textarea>
+    ${tagCheckboxes()}
     <div class="err-msg" id="evErr"></div>
     <div class="modal-row" style="margin-top:14px">
       <button class="btn-cancel" onclick="closeModal('eventModal');openAdminPanel()">${T.cancel}</button>
@@ -836,54 +685,43 @@ function openAddEvent() {
 }
 
 async function saveNewEvent() {
-  const T = t();
-  const date  = document.getElementById("ev-date").value;
-  const title = document.getElementById("ev-title").value.trim();
-  const time  = document.getElementById("ev-time").value.trim();
-  const venue = document.getElementById("ev-venue").value.trim();
-  const with_ = document.getElementById("ev-with").value.trim();
-  const type  = document.getElementById("ev-type").value;
-  if (!date || !title || !time || !venue) {
-    document.getElementById("evErr").textContent = T.required; return;
-  }
-  const btn = document.getElementById("evSaveBtn");
-  btn.textContent = T.saving; btn.disabled = true;
-  if (!EVENTS[date]) EVENTS[date] = [];
-  EVENTS[date].push({ type, title, time, venue, with: with_ || "솔로" });
-  await saveEvents(EVENTS);
-  btn.textContent = T.saved;
-  setTimeout(() => {
-    closeModal("eventModal");
-    renderCal(); renderUpcoming();
-    if (selectedDate) renderSched(selectedDate);
-    adminTab = "sched";
-    openAdminPanel();
-  }, 600);
+  const T=t();
+  const date=document.getElementById("ev-date").value;
+  const title=document.getElementById("ev-title").value.trim();
+  const time=document.getElementById("ev-time").value.trim();
+  const venue=document.getElementById("ev-venue").value.trim();
+  if (!date||!title||!time||!venue) { document.getElementById("evErr").textContent=T.required; return; }
+  const btn=document.getElementById("evSaveBtn"); btn.textContent=T.saving; btn.disabled=true;
+  if (!EVENTS[date]) EVENTS[date]=[];
+  EVENTS[date].push({
+    type: document.getElementById("ev-type").value,
+    title, time, venue,
+    with: document.getElementById("ev-with").value.trim()||"솔로",
+    link: document.getElementById("ev-link").value.trim(),
+    comment: document.getElementById("ev-comment").value.trim(),
+    teamTags: getSelectedTags("tt", TEAM_TAGS),
+    formationTags: getSelectedTags("ft", FORM_TAGS),
+  });
+  saveLocal(KEYS.events, EVENTS);
+  await fbSaveAll();
+  btn.textContent=T.saved;
+  setTimeout(()=>{ closeModal("eventModal"); renderCal(); renderUpcoming(); if(selectedDate)renderSched(selectedDate); adminTab="sched"; openAdminPanel(); }, 600);
 }
 
-// =====================================================
-// 공연 수정
-// =====================================================
 function openEditEvent(date, idx) {
-  const T = t();
-  const ev = EVENTS[date][idx];
-  closeModal("adminModal");
-  document.getElementById("eventBox").innerHTML = `
+  const T=t(); const ev=EVENTS[date][idx]; closeModal("adminModal");
+  document.getElementById("eventBox").innerHTML=`
     <div class="modal-title">${T.fieldTitle}</div>
-    <div class="modal-label">${T.fieldDate}</div>
-    <input class="modal-input" type="date" id="ev-date" value="${date}">
+    <div class="modal-label">${T.fieldDate}</div><input class="modal-input" type="date" id="ev-date" value="${date}">
     <div class="modal-label">${T.fieldType}</div>
-    <select class="modal-input" id="ev-type">
-      ${T.typeOptions.map(o => `<option${ev.type===o?" selected":""}>${o}</option>`).join("")}
-    </select>
-    <div class="modal-label">${T.fieldTitle}</div>
-    <input class="modal-input" id="ev-title" value="${ev.title}">
-    <div class="modal-label">${T.fieldTime}</div>
-    <input class="modal-input" id="ev-time" value="${ev.time}">
-    <div class="modal-label">${T.fieldVenue}</div>
-    <input class="modal-input" id="ev-venue" value="${ev.venue}">
-    <div class="modal-label">${T.fieldWith}</div>
-    <input class="modal-input" id="ev-with" value="${ev.with}">
+    <select class="modal-input" id="ev-type">${T.typeOptions.map(o=>`<option${ev.type===o?" selected":""}>${o}</option>`).join("")}</select>
+    <div class="modal-label">${T.fieldTitle}</div><input class="modal-input" id="ev-title" value="${ev.title}">
+    <div class="modal-label">${T.fieldTime}</div><input class="modal-input" id="ev-time" value="${ev.time}">
+    <div class="modal-label">${T.fieldVenue}</div><input class="modal-input" id="ev-venue" value="${ev.venue}">
+    <div class="modal-label">${T.fieldWith}</div><input class="modal-input" id="ev-with" value="${ev.with||''}">
+    <div class="modal-label">${T.fieldLink}</div><input class="modal-input" id="ev-link" value="${ev.link||''}">
+    <div class="modal-label">${T.fieldComment}</div><textarea class="modal-input" id="ev-comment">${ev.comment||''}</textarea>
+    ${tagCheckboxes(ev.teamTags||[], ev.formationTags||[])}
     <div class="err-msg" id="evErr"></div>
     <div class="modal-row" style="margin-top:14px">
       <button class="btn-cancel" onclick="closeModal('eventModal');openAdminPanel()">${T.cancel}</button>
@@ -893,77 +731,62 @@ function openEditEvent(date, idx) {
 }
 
 async function saveEditEvent(oldDate, idx) {
-  const T = t();
-  const date  = document.getElementById("ev-date").value;
-  const title = document.getElementById("ev-title").value.trim();
-  const time  = document.getElementById("ev-time").value.trim();
-  const venue = document.getElementById("ev-venue").value.trim();
-  const with_ = document.getElementById("ev-with").value.trim();
-  const type  = document.getElementById("ev-type").value;
-  if (!date || !title || !time || !venue) {
-    document.getElementById("evErr").textContent = T.required; return;
-  }
-  const btn = document.getElementById("evSaveBtn");
-  btn.textContent = T.saving; btn.disabled = true;
-  EVENTS[oldDate].splice(idx, 1);
-  if (!EVENTS[oldDate].length) delete EVENTS[oldDate];
-  if (!EVENTS[date]) EVENTS[date] = [];
-  EVENTS[date].push({ type, title, time, venue, with: with_ || "솔로" });
-  await saveEvents(EVENTS);
-  btn.textContent = T.saved;
-  setTimeout(() => {
-    closeModal("eventModal");
-    renderCal(); renderUpcoming();
-    if (selectedDate) renderSched(selectedDate);
-    adminTab = "sched";
-    openAdminPanel();
-  }, 600);
-}
-
-// =====================================================
-// 공연 삭제
-// =====================================================
-async function deleteEvent(date, idx) {
-  EVENTS[date].splice(idx, 1);
-  if (!EVENTS[date].length) delete EVENTS[date];
-  await saveEvents(EVENTS);
-  renderCal(); renderUpcoming();
-  if (selectedDate) renderSched(selectedDate);
-  renderAdminPanel();
-}
-
-// =====================================================
-// 로그아웃
-// =====================================================
-function doLogout() {
-  isAdmin = false;
-  closeModal("adminModal");
-  document.getElementById("adminBtn").innerHTML = `<i class="ti ti-lock"></i>`;
-}
-
-// =====================================================
-// 모달 닫기
-// =====================================================
-function closeModal(id) {
-  document.getElementById(id).classList.remove("open");
-}
-
-// 모달 배경 클릭하면 닫기
-document.querySelectorAll(".modal-wrap").forEach(w => {
-  w.addEventListener("click", e => {
-    if (e.target === w) w.classList.remove("open");
+  const T=t();
+  const date=document.getElementById("ev-date").value;
+  const title=document.getElementById("ev-title").value.trim();
+  const time=document.getElementById("ev-time").value.trim();
+  const venue=document.getElementById("ev-venue").value.trim();
+  if (!date||!title||!time||!venue) { document.getElementById("evErr").textContent=T.required; return; }
+  const btn=document.getElementById("evSaveBtn"); btn.textContent=T.saving; btn.disabled=true;
+  EVENTS[oldDate].splice(idx,1); if(!EVENTS[oldDate].length) delete EVENTS[oldDate];
+  if (!EVENTS[date]) EVENTS[date]=[];
+  EVENTS[date].push({
+    type: document.getElementById("ev-type").value,
+    title, time, venue,
+    with: document.getElementById("ev-with").value.trim()||"솔로",
+    link: document.getElementById("ev-link").value.trim(),
+    comment: document.getElementById("ev-comment").value.trim(),
+    teamTags: getSelectedTags("tt", TEAM_TAGS),
+    formationTags: getSelectedTags("ft", FORM_TAGS),
   });
+  saveLocal(KEYS.events, EVENTS);
+  await fbSaveAll();
+  btn.textContent=T.saved;
+  setTimeout(()=>{ closeModal("eventModal"); renderCal(); renderUpcoming(); if(selectedDate)renderSched(selectedDate); adminTab="sched"; openAdminPanel(); }, 600);
+}
+
+async function deleteEvent(date, idx) {
+  EVENTS[date].splice(idx,1); if(!EVENTS[date].length) delete EVENTS[date];
+  saveLocal(KEYS.events, EVENTS); await fbSaveAll();
+  renderCal(); renderUpcoming(); if(selectedDate)renderSched(selectedDate); renderAdminPanel();
+}
+
+// =====================================================
+// 배너 사진
+// =====================================================
+function handlePhotoUpload(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{ const d=ev.target.result; saveLocalStr(KEYS.banner,d); const img=document.getElementById("bannerImg"); img.src=d; img.style.display="block"; renderAdminPanel(); };
+  reader.readAsDataURL(file); e.target.value="";
+}
+function removeBanner() { saveLocalStr(KEYS.banner,""); const img=document.getElementById("bannerImg"); img.src=""; img.style.display="none"; renderAdminPanel(); }
+
+function doLogout() { isAdmin=false; closeModal("adminModal"); document.getElementById("adminBtn").innerHTML=`<i class="ti ti-lock"></i>`; }
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+document.querySelectorAll(".modal-wrap").forEach(w=>{
+  w.addEventListener("click", e=>{ if(e.target===w) w.classList.remove("open"); });
 });
 
 // =====================================================
-// 앱 시작!
+// 시작
 // =====================================================
-initBanner();
+const savedBanner = loadLocalStr(KEYS.banner,"");
+if (savedBanner) { const img=document.getElementById("bannerImg"); img.src=savedBanner; img.style.display="block"; }
+
 setLang(lang);
-document.querySelectorAll(".lang-btn").forEach((b, i) => {
-  b.classList.toggle("active", ["ko","en","pt"][i] === lang);
-});
-
+document.querySelectorAll(".lang-btn").forEach((b,i)=>b.classList.toggle("active",["ko","en","pt"][i]===lang));
 </script>
 </body>
 </html>
