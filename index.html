@@ -530,7 +530,11 @@ function renderUpcoming() {
 
 function goToDate(key) {
   const [y,m]=key.split("-").map(Number); curYear=y; curMonth=m;
-  selectDate(key); document.getElementById("app").scrollIntoView({behavior:"smooth"});
+  selectDate(key);
+  setTimeout(()=>{
+    const sec=document.getElementById("schedSection");
+    if(sec) sec.scrollIntoView({behavior:"smooth", block:"start"});
+  }, 80);
 }
 
 // =====================================================
